@@ -1,8 +1,13 @@
-<script setup lang="ts">
+<template>
+  <Extract type="API"/>
+</template>
+
+
+<script setup>
+import Extract from './components/Extract/Extract.vue';
 </script>
 
-<template>
-</template>
+
 
 <style scoped>
 </style>
