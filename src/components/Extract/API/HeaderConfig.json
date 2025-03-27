@@ -1,0 +1,25 @@
+[
+    {
+        "Content-Type": [
+            "application/json",
+            "application/xml",
+            "application/x-www-form-urlencoded",
+            "application/form-data",
+            "text/html",
+            "text/css",
+            "text/csv"
+        ]
+    },
+    {
+        "Authorization": [
+            "Bearer", 
+            "Basic"
+        ]
+    },
+    {
+        "Accept": [
+            "application/json"
+        ]
+    }
+]
+  

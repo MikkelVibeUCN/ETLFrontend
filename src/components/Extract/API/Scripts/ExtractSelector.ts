@@ -1,6 +1,6 @@
 import { ref } from 'vue';
-import { fetchJsonWithHeaders, formatHeaders, simplifyJsonStructure } from '../../../../Shared_Scripts//fetchFormat';
-import { buildFieldTreeFromJson, type FieldNode } from '../../../../Shared_Scripts/jsonTreeBuilder';
+import { fetchJsonWithHeaders, formatHeaders, simplifyJsonStructure } from '../../../../shared/scripts/fetchFormat';
+import { buildFieldTreeFromJson, type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder';
 
 export function useFormatLoader() {
     // State
