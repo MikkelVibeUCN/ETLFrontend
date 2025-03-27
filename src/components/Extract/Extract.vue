@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import APIContent from './APIContent.vue'
+import APIContent from './API/Vue/APIContent.vue';
 
 export default {
     name: 'Extract',
