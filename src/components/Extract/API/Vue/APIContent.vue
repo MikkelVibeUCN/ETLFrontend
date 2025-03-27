@@ -39,7 +39,7 @@ const headers = ref<Header[]>([
   {
     key: 'Authorization',
     value: 'Bearer',
-    extra: 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzY2ZjNWNmNGM4YzcxYTZiNjE0MmM0ODQxNWFjN2U5OCIsIm5iZiI6MTc0MjU3MDc2Ni42NjEsInN1YiI6IjY3ZGQ4NTBlMDQxNjg3NWFkYzY5OGRhZCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Wpozuz_n15UxNbi06eooyI5pd41zdAK1BN0LxexZAUg'
+    extra: ''
   },
   {
     key: 'Accept',
