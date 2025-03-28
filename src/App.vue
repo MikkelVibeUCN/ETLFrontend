@@ -1,10 +1,10 @@
 <template>
-  <Extract type="API"/>
+<MainView></MainView>
 </template>
 
 
 <script setup>
-import Extract from './components/Extract/Extract.vue';
+import MainView from './Views/MainView.vue';
 </script>
 
 
