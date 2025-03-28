@@ -1,15 +1,15 @@
 <template>
-    <div class="main-view" :class="{ grabbing: state.cursor === 'grabbing' }" @mousedown.right.prevent="handleMouseDown"
-        @mouseup.prevent="handleMouseUp" @mousemove="handleMouseMove" @contextmenu.prevent @wheel.prevent="onWheel"
+    <div class="main-view" :class="{ grabbing: state.cursor === 'grabbing' }" 
+        @mousedown.right.prevent="handleMouseDown"
+        @mouseup.prevent="handleMouseUp" 
+        @mousemove="handleMouseMove" 
+        @contextmenu.prevent 
+        @wheel.prevent="onWheel"
+        
         ref="viewContainer">
 
         <div class="pan-zoom-container" :style="transformStyle">
             <div v-for="(node, index) in nodes" :key="index" class="draggable" :ref="el => setNodeRef(index, el)"
-
-
-
-
-
                 :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
                 <Extract :type="node.type" :component-props="node" @dragstart="startNodeDrag(index, $event)" />
             </div>
@@ -30,46 +30,46 @@ import type { NodeData, ContextMenuData } from '../shared/types/canva'
 // Refs and reactive state
 const viewContainer = ref<HTMLElement | null>(null)
 const nodes = ref<NodeData[]>([
-  { x: 100, y: 100, type: 'API', name: 'API' }
+    { x: 100, y: 100, type: 'API', name: 'API' }
 ])
 
 const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])
 
 function setNodeRef(index: number, el: Element | Component | null) {
-  nodeRefs.value[index] = el instanceof HTMLElement ? el : null
+    nodeRefs.value[index] = el instanceof HTMLElement ? el : null
 }
 const contextMenu = reactive<ContextMenuData>({
-  visible: false,
-  x: 0,
-  y: 0,
-  worldX: 0,
-  worldY: 0
+    visible: false,
+    x: 0,
+    y: 0,
+    worldX: 0,
+    worldY: 0
 })
 
 // Pan/Zoom/Drag logic
 const {
-  transformStyle,
-  state,
-  startNodeDrag,
-  handleMouseDown,
-  handleMouseUp,
-  handleMouseMove,
-  onWheel
+    transformStyle,
+    state,
+    startNodeDrag,
+    handleMouseDown,
+    handleMouseUp,
+    handleMouseMove,
+    onWheel
 } = useCanvasControls(viewContainer, nodes, nodeRefs, contextMenu)
 
 // Hook into emitted context menu action
 function handleAddNode(type: string, name: string) {
-  addNode(type, name, contextMenu, nodes, nodeRefs)
+    addNode(type, name, contextMenu, nodes, nodeRefs)
 }
 
 // Hide context menu on click outside
 onMounted(() => {
-  window.addEventListener('click', (e) => {
-    const menu = document.querySelector('.context-menu')
-    if (!menu || !menu.contains(e.target as Node)) {
-      contextMenu.visible = false
-    }
-  })
+    window.addEventListener('click', (e) => {
+        const menu = document.querySelector('.context-menu')
+        if (!menu || !menu.contains(e.target as Node)) {
+            contextMenu.visible = false
+        }
+    })
 })
 </script>
 
