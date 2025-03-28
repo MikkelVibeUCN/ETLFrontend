@@ -22,7 +22,6 @@
               {{ child.name }}
             </label>
   
-            <!-- Recursive children -->
             <TreeCheckbox
               v-if="child.children"
               :nodes="child.children"
@@ -36,7 +35,7 @@
   
   <script lang="ts">
   import { defineComponent, type PropType } from 'vue';
-  import type { FieldNode } from '../../../../Shared Scripts/jsonTreeBuilder';
+  import type { FieldNode } from '../../../../shared/scripts/jsonTreeBuilder';
   
   export default defineComponent({
     name: 'TreeCheckbox',

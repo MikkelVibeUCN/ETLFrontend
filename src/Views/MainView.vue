@@ -64,7 +64,7 @@ export default {
 </script>
 
   
-<style scoped>
+  <style scoped>
 .main-wrapper {
   display: flex;
   flex-direction: column;

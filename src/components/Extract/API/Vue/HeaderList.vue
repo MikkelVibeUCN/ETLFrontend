@@ -1,8 +1,15 @@
 <template>
+    <div class="row-with-label" v-show="headers.length === 0">
+        <label class="left-label">Headers</label>
+        <div style="font-style: italic; color: #999;">No headers added.</div>
+    </div>
+
     <div class="row-with-label" v-for="(header, index) in headers" :key="index">
         <label class="left-label" :for="'header-key-' + index">
             {{ index === 0 ? 'Headers' : '\u00A0' }}
         </label>
+
+
 
         <div class="header-right">
             <div class="header-row">
@@ -31,9 +38,9 @@
         </div>
     </div>
     <div class="row-with-label">
-  <label class="left-label"></label>
-  <button @click="addHeader">Add +</button>
-</div>
+        <label class="left-label"></label>
+        <button @click="addHeader">Add +</button>
+    </div>
 
 
 </template>

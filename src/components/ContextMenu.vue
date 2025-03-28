@@ -3,9 +3,14 @@
       class="context-menu"
       :style="{ top: `${y}px`, left: `${x}px` }"
       @mousedown.stop
-      @click.stop
+      @click.stop=""
     >
-      <div class="menu-item" @mouseenter="menu.open = 'add'" @mouseleave="menu.open = null" data-arrow="→">
+      <div
+        class="menu-item"
+        @mouseenter="menu.open = 'add'"
+        @mouseleave="menu.open = null"
+        data-arrow="→"
+      >
         Add
         <div v-if="menu.open === 'add'" class="submenu">
           <div
@@ -29,24 +34,36 @@
     </div>
   </template>
   
-  <script setup>
-  import { reactive } from 'vue'
+  <script lang="ts">
+  import { defineComponent } from 'vue'
   
-  defineProps({
-    x: Number,
-    y: Number
+  export default defineComponent({
+    name: 'ContextMenu',
+    props: {
+      x: {
+        type: Number,
+        required: true
+      },
+      y: {
+        type: Number,
+        required: true
+      }
+    },
+    emits: ['add-node'],
+    data() {
+      return {
+        menu: {
+          open: null as string | null,
+          openSub: null as string | null
+        }
+      }
+    },
+    methods: {
+      emitAdd(type: string, name: string) {
+        this.$emit('add-node', type, name)
+      }
+    }
   })
-  
-  const emit = defineEmits(['add-node'])
-  
-  const menu = reactive({
-    open: null,
-    openSub: null
-  })
-  
-  function emitAdd(type, name) {
-    emit('add-node', type, name)
-  }
   </script>
   
   <style scoped>
@@ -83,7 +100,7 @@
     position: absolute;
     top: 0;
     left: 100%;
-    margin-left: 2px;
+    margin-left: -1px;
     background-color: #2c2c2c;
     border: 1px solid #555;
     border-radius: 6px;

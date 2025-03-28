@@ -1,6 +1,6 @@
 <template>
     <div class="extract-wrapper">
-      <div class="extract-header">
+      <div class="extract-header" @mousedown.left.stop="$emit('dragstart', $event)">
         <font-awesome-icon icon="globe" class="globe-icon" />
         <span class="title">Extract from URL</span>
         <button class="dots-btn" @click="handleDotsClick">•••</button>
