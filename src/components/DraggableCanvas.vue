@@ -30,7 +30,6 @@ import type { NodeData, ContextMenuData } from '../shared/types/canva'
 // Refs and reactive state
 const viewContainer = ref<HTMLElement | null>(null)
 const nodes = ref<NodeData[]>([
-    { x: 100, y: 100, type: 'API', name: 'API' }
 ])
 
 const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])

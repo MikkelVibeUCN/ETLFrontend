@@ -15,9 +15,7 @@
         </div>
       </div>
   
-      <DraggableCanvas>
-        <Extract type="API" :componentProps="{}" />
-      </DraggableCanvas>
+      <DraggableCanvas/>
     </div>
   </template>
   
@@ -25,12 +23,14 @@
   <script lang="ts">
 import DraggableCanvas from '../components/DraggableCanvas.vue'
 import Extract from '../components/Extract/Extract.vue'
+import Transform from '../components/Transform/Transform.vue';
 
 export default {
   name: 'MainView',
   components: {
     DraggableCanvas,
-    Extract
+    Extract,
+    Transform
   },
   data() {
     return {
