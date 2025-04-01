@@ -25,6 +25,7 @@ export function useCanvasControls(
       cursor: 'default'
     })
   function startNodeDrag(index: number, e: MouseEvent) {
+    console.log("Dragging")
     state.isDragging = true
     state.draggedNodeIndex = index
     state.startX = e.clientX

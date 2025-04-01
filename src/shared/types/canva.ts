@@ -1,9 +1,16 @@
+import type { NodeGroup } from './nodeRegistry'
+
 export interface NodeData {
-    x: number
-    y: number
-    type: string
-    name: string
-  }
+  id: number
+  x: number
+  y: number
+  type: string         // e.g., "API"
+  title: string        // from registry
+  icon: string         // from registry
+  group: NodeGroup     // added
+}
+
+
   
   export interface ContextMenuData {
     visible: boolean

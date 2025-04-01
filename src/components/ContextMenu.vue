@@ -4,27 +4,25 @@
       Add
       <div v-if="menu.open === 'add'" class="submenu">
         <div
-          v-for="(items, type) in subMenues"
+          v-for="(items, type) in subMenus"
           :key="type"
           class="submenu-item"
           :class="{ disabled: items.length === 0 }"
-          @mouseenter="menu.openSub = type"
+          @mouseenter="menu.openSub = type as NodeGroup"
           @mouseleave="menu.openSub = null"
           :data-arrow="items.length > 0 ? '→' : ''"
         >
           {{ type.charAt(0).toUpperCase() + type.slice(1) }}
 
-          <div
-            v-if="menu.openSub === type && items.length > 0"
-            class="submenu deep"
-          >
+          <div v-if="menu.openSub === type && items.length > 0" class="submenu deep">
             <div
               v-for="item in items"
               :key="item.version"
               class="submenu-item"
-              @click="emitAdd(type, item.version)"
+              :class="{ disabled: !item.enabled }"
+              @click="item.enabled && emitAdd(type as NodeGroup, item.version)"
             >
-              {{ item.version }}
+              {{ item.title }}
             </div>
           </div>
         </div>
@@ -35,45 +33,32 @@
 
 
 <script lang="ts">
-import { defineComponent, version } from 'vue'
+import { defineComponent, computed } from 'vue'
+import { nodeRegistry, type NodeGroup, type NodeDefinition  } from '../shared/types/nodeRegistry'
 
 export default defineComponent({
   name: 'ContextMenu',
   props: {
-    x: {
-      type: Number,
-      required: true
-    },
-    y: {
-      type: Number,
-      required: true
-    }
+    x: { type: Number, required: true },
+    y: { type: Number, required: true }
   },
   emits: ['add-node'],
   data() {
     return {
       menu: {
-        open: null as string | null,
-        openSub: null as string | null
-      },
-      subMenues: {
-        extract: [
-          { "version": "API" },
-          { "version": "File" }
-        ],
-        transform: [
-          { "version": "Rules" }
-        ],
-        load: [
-          { "version": "Database" },
-          { "version": "File" },
-        ]
+        open: null as 'add' | null,
+        openSub: null as NodeGroup | null
       }
     }
   },
+  computed: {
+    subMenus(): Record<NodeGroup, NodeDefinition[]> {
+      return nodeRegistry
+    }
+  },
   methods: {
-    emitAdd(type: string, name: string) {
-      this.$emit('add-node', type, name)
+    emitAdd(type: NodeGroup, version: string) {
+      this.$emit('add-node', version) // just the type/version
     }
   }
 })
