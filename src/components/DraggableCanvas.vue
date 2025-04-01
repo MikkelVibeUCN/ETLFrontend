@@ -135,7 +135,6 @@ const {
   onWheel
 } = useCanvasControls(viewContainer, nodes, nodeRefs, contextMenu)
 
-// 🔧 Dynamically updates canvas (SVG) size to fit all nodes and zoom
 function updateContainerBounds() {
   const rect = viewContainer.value?.getBoundingClientRect()
   if (!rect) return
@@ -143,6 +142,7 @@ function updateContainerBounds() {
   let maxX = 0
   let maxY = 0
 
+  // 🧱 Include all nodes
   for (const node of nodes.value) {
     const ref = nodeRefs.value.find(n => n?.dataset.id === String(node.id))
     const width = ref?.offsetWidth || 100
@@ -152,7 +152,19 @@ function updateContainerBounds() {
     maxY = Math.max(maxY, node.y + height)
   }
 
-  // Add padding and ensure SVG covers full area after scale
+  // 🧷 Include all edge endpoints
+  for (const edge of edges.value) {
+    maxX = Math.max(maxX, edge.start.x, edge.end.x)
+    maxY = Math.max(maxY, edge.start.y, edge.end.y)
+  }
+
+  // 🎯 Include mouse position if a connection is being drawn
+  if (connectionStart.value) {
+    maxX = Math.max(maxX, mouse.x)
+    maxY = Math.max(maxY, mouse.y)
+  }
+
+  // Add margin and enforce minimum
   containerSize.width = Math.max(rect.width / scale.value, maxX + 100)
   containerSize.height = Math.max(rect.height / scale.value, maxY + 100)
 }
@@ -165,12 +177,12 @@ function handleMouseMove(event: MouseEvent) {
     mouse.y = (event.clientY - rect.top - panOffset.y) / scale.value
   }
 
-  updateContainerBounds() // Recalculate bounds on every move (pan or drag)
+  updateContainerBounds()
 }
 
 function handleAddNode(type: string) {
   addNode(type, contextMenu, nodes, nodeRefs)
-  updateContainerBounds() // Also update if a node is added
+  updateContainerBounds()
 }
 
 function handleStartConnection(nodeId: number) {
@@ -205,7 +217,7 @@ function handleFinishConnection(nodeId: number) {
   })
 
   connectionStart.value = null
-  updateContainerBounds() // Might expand canvas after adding a long edge
+  updateContainerBounds()
 }
 
 function updateEdgePositions() {
@@ -251,11 +263,12 @@ onMounted(() => {
   requestAnimationFrame(animateEdgeUpdates)
 })
 
-// Recalculate container bounds when scale changes (i.e. zoom)
+// 🔍 Recalculate bounds after zoom
 watch(scale, () => {
   updateContainerBounds()
 })
 </script>
+
 
 
   
