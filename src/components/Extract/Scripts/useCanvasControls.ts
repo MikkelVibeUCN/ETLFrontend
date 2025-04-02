@@ -2,6 +2,7 @@ import { ref, reactive, computed, type Ref, type ComputedRef } from 'vue'
 import { isOverlapping, getNodeRect } from '../../../shared/scripts/utils/geometry'
 import type { NodeData, ContextMenuData, PanState } from '../../../shared/types/canva'
 
+
 export function useCanvasControls(
     viewContainer: Ref<HTMLElement | null>,
     nodes: Ref<NodeData[]>,
@@ -9,6 +10,7 @@ export function useCanvasControls(
     contextMenu: ContextMenuData
   ) {
     const scale = ref(1)
+    const maxScale = 0.1
     const panOffset = reactive({ x: 0, y: 0 })
   
     const transformStyle: ComputedRef<Record<string, string>> = computed(() => ({
@@ -110,7 +112,7 @@ export function useCanvasControls(
     const mouseX = e.clientX - rect.left
     const mouseY = e.clientY - rect.top
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
-    const newScale = Math.min(5, Math.max(0.5, scale.value * zoomFactor))
+    const newScale = Math.min(5, Math.max(maxScale, scale.value * zoomFactor))
     const worldX = (mouseX - panOffset.x) / scale.value
     const worldY = (mouseY - panOffset.y) / scale.value
     scale.value = newScale

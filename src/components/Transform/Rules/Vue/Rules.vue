@@ -103,21 +103,6 @@
         </div>
       </div>
     </template>
-
-    <!-- Empty state if no nodes -->
-    <div v-else class="empty-state">
-      <h3>No fields detected</h3>
-      <p class="empty-description">
-        Once you load a schema or JSON input, your fields will appear here. <br />
-        You can then apply transformations such as renaming, filtering, and setting rules like
-        <em>Equals</em> or <em>Contains</em>.
-      </p>
-      <ul class="empty-tips">
-        <li>💡 Upload your sample JSON or connect to a data source</li>
-        <li>💡 Fields will be parsed into a tree with editable rules</li>
-        <li>💡 Use <strong>Change Name</strong> to rename fields</li>
-      </ul>
-    </div>
   </div>
 </template>
 
@@ -149,6 +134,7 @@ const ruleValues = ref<Record<string, any>>({})
 
 
 import ruleConfig from '../Scripts/ruleConfig'
+import DefaultContent from './DefaultContent.vue'
 
 function getRuleOptionsFor(node: FieldNode): string[] {
   const baseRules = ruleConfig.typeRules[(node as any).dataType || 'string'] || []
@@ -183,13 +169,10 @@ function addRule(node: FieldNode) {
     if (typeof value === 'string' && value === '$fieldName') {
       value = node.name
     }
-
     ruleValues.value[node.name + '_' + rule] = value
   }
-
   emitChange()
 }
-
 
 function getInputDefinition(ruleKey: string, dataType: string) {
   const def = ruleConfig.ruleDefinitions[ruleKey]
@@ -360,25 +343,4 @@ onMounted(() => {
   margin: 2rem auto;
   width: auto;
 }
-
-
-.empty-description {
-  font-size: 0.95rem;
-  margin-bottom: 1rem;
-  line-height: 1.5;
-}
-
-.empty-tips {
-  list-style: none;
-  padding: 0;
-  margin: 0 auto;
-  max-width: 400px;
-  font-size: 0.9rem;
-  color: #aaa;
-}
-
-.empty-tips li {
-  margin: 0.25rem 0;
-}
-
 </style>
