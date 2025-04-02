@@ -67,11 +67,11 @@
             @dragstart="startNodeDrag(index, $event)"
             @start-connection="handleStartConnection"
             @finish-connection="handleFinishConnection"
+            @update-node-payload="handleNodePayload"
           />
         </div>
       </div>
   
-      <!-- Context menu -->
       <ContextMenu
         v-if="contextMenu.visible"
         :x="contextMenu.x"
@@ -82,12 +82,19 @@
   </template>
   
   <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch, type Ref, type Component } from 'vue'
+import { ref, reactive, onMounted, watchEffect, watch, type Ref, type Component, toRaw } from 'vue'
 import ContextMenu from './ContextMenu.vue'
 import ETLNodeWrapper from './ETLNodeWrapper.vue'
 import { useCanvasControls } from './Extract/Scripts/useCanvasControls'
 import { addNode } from '../shared/scripts/utils/addNode'
 import type { NodeData, ContextMenuData } from '../shared/types/canva'
+
+
+import { provide } from 'vue'
+import { filterSelectedFields } from '../shared/scripts/utils/treeFilter'
+
+
+
 
 const viewContainer = ref<HTMLElement | null>(null)
 const nodes = ref<NodeData[]>([])
@@ -95,6 +102,9 @@ const edges = ref<Edge[]>([])
 const mouse = reactive({ x: 0, y: 0 })
 const connectionStart = ref<{ nodeId: number; x: number; y: number } | null>(null)
 const containerSize = reactive({ width: 0, height: 0 })
+
+provide('nodes', nodes)
+provide('edges', edges)
 
 interface ConnectorRefs {
   in: HTMLElement
@@ -209,6 +219,7 @@ function handleFinishConnection(nodeId: number) {
   const endX = (rect.left + rect.width / 2 - containerRect.left - panOffset.x) / scale.value
   const endY = (rect.top + rect.height / 2 - containerRect.top - panOffset.y) / scale.value
 
+  // Add the connection
   edges.value.push({
     fromNodeId: connectionStart.value.nodeId,
     toNodeId: nodeId,
@@ -216,9 +227,26 @@ function handleFinishConnection(nodeId: number) {
     end: { x: endX, y: endY }
   })
 
+  // ⚡ Transfer fieldTree from Extract to Transform if available
+  const fromNode = nodes.value.find(n => n.id === connectionStart.value!.nodeId)
+  const toNode = nodes.value.find(n => n.id === nodeId)
+
+  if (fromNode?.group === 'extract' && toNode?.group === 'transform') {
+    if (fromNode.fieldTree) {
+
+      const rawTree = toRaw(fromNode.fieldTree)
+      const filteredTree = filterSelectedFields(rawTree)
+      toNode.fieldTree = filteredTree
+    } else {
+      // If not yet available, wait for "getFormat" to populate it
+      // Option 1: Watch later OR store pending links
+    }
+  }
+
   connectionStart.value = null
   updateContainerBounds()
 }
+
 
 function updateEdgePositions() {
   const containerRect = viewContainer.value?.getBoundingClientRect()
@@ -249,6 +277,34 @@ function animateEdgeUpdates() {
   requestAnimationFrame(animateEdgeUpdates)
 }
 
+function handleNodePayload({ fromId, payload }: { fromId: number; payload: any }) {
+console.log("Payload recieved in canvas")
+
+  const fromNode = nodes.value.find(n => n.id === fromId)
+  if (!fromNode || !payload) return
+
+  const filteredPayload: Record<string, any> = {}
+
+  // Type guard for fieldTree
+  if ('fieldTree' in payload && Array.isArray(payload.fieldTree)) {
+    const rawTree = toRaw(payload.fieldTree)
+    filteredPayload.fieldTree = filterSelectedFields(rawTree)
+  }
+
+  // Propagate to all connected nodes
+  for (const edge of edges.value) {
+    if (edge.fromNodeId !== fromId) continue
+
+    const toNode = nodes.value.find(n => n.id === edge.toNodeId)
+    if (toNode) {
+      Object.assign(toNode, filteredPayload)
+    }
+  }
+}
+
+
+
+
 onMounted(() => {
   updateContainerBounds()
   window.addEventListener('resize', updateContainerBounds)
@@ -266,6 +322,22 @@ onMounted(() => {
 // 🔍 Recalculate bounds after zoom
 watch(scale, () => {
   updateContainerBounds()
+})
+watchEffect(() => {
+  for (const fromNode of nodes.value) {
+    if (fromNode.group !== 'extract' || !fromNode.fieldTree) continue
+
+    const filteredTree = filterSelectedFields(toRaw(fromNode.fieldTree))
+
+    for (const edge of edges.value) {
+      if (edge.fromNodeId !== fromNode.id) continue
+
+      const toNode = nodes.value.find(n => n.id === edge.toNodeId && n.group === 'transform')
+      if (toNode) {
+        toNode.fieldTree = filteredTree
+      }
+    }
+  }
 })
 </script>
 

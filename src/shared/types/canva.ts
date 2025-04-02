@@ -8,8 +8,17 @@ export interface NodeData {
   title: string        // from registry
   icon: string         // from registry
   group: NodeGroup     // added
+  fieldTree?: FieldNode[]
+
 }
 
+interface FieldNode {
+  name: string
+  selected: boolean
+  dataType: string;
+  rule?: string
+  children?: FieldNode[]
+}
 
   
   export interface ContextMenuData {

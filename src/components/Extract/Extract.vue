@@ -1,6 +1,12 @@
 <template>
     <div class="extract-container">
-      <component :is="currentComponent" v-bind="componentProps" />
+      <component
+  :is="currentComponent"
+  v-bind="componentProps"
+  @update-payload="onPayload"
+/>
+
+
     </div>
 </template>
 
@@ -35,7 +41,11 @@ export default {
   methods: {
     handleDotsClick() {
       console.log('More options clicked');
-    }
+    },
+    onPayload(payload) {
+    console.log('[Extract] Forwarding update-payload:', payload)
+    this.$emit('update-payload', payload)
+  }
   }
 }
 </script>

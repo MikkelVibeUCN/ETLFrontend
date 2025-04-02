@@ -1,32 +1,69 @@
 export interface FieldNode {
-    name: string;
-    selected: boolean;
-    children?: FieldNode[];
-  }
-  
-  export function buildFieldTreeFromJson(json: any): FieldNode[] {  
-    function parseObject(obj: any, parentKey = ''): FieldNode[] {
-      if (typeof obj !== 'object' || obj === null) return [];
-  
-      if (Array.isArray(obj)) {
-        // Assume first element is representative
-        return parseObject(obj[0], parentKey);
-      }
-  
-      return Object.entries(obj).map(([key, value]) => {
-        const node: FieldNode = {
-          name: key,
-          selected: true
-        };
-  
-        if (typeof value === 'object' && value !== null) {
-          node.children = parseObject(value, key);
-        }
-  
-        return node;
-      });
+  name: string;
+  selected: boolean;
+  dataType: string; // "string", "number", "boolean", "object", "list", or "null"
+  children?: FieldNode[];
+}
+
+export function buildFieldTreeFromJson(json: any): FieldNode[] {
+  function normalizeType(value: string): string {
+    switch (value.toLowerCase()) {
+      case "string":
+        return "string";
+      case "number":
+        return "number";
+      case "bool":
+      case "boolean":
+        return "boolean";
+      case "null":
+        return "null";
+      default:
+        return "string"; // fallback if unknown type
     }
-  
-    return parseObject(json);
   }
-  
+
+  function parseObject(obj: any): FieldNode[] {
+    if (typeof obj !== "object" || obj === null) return [];
+
+    if (Array.isArray(obj)) {
+      return parseObject(obj[0]);
+    }
+
+    return Object.entries(obj).map(([key, value]) => {
+      let node: FieldNode;
+
+      if (typeof value === "string") {
+        node = {
+          name: key,
+          selected: true,
+          dataType: normalizeType(value)
+        };
+      } else if (Array.isArray(value)) {
+        const children = parseObject(value[0]);
+        node = {
+          name: key,
+          selected: true,
+          dataType: "list",
+          children
+        };
+      } else if (typeof value === "object" && value !== null) {
+        node = {
+          name: key,
+          selected: true,
+          dataType: "object",
+          children: parseObject(value)
+        };
+      } else {
+        node = {
+          name: key,
+          selected: true,
+          dataType: normalizeType(String(value))
+        };
+      }
+
+      return node;
+    });
+  }
+
+  return parseObject(json);
+}

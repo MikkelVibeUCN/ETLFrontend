@@ -11,7 +11,9 @@
     </div>
 
     <div class="node-container">
-      <component :is="component" :type="type" :componentProps="componentProps" />
+      <component :is="component" :type="type" :componentProps="componentProps"
+        @update-payload="handlePayload" />
+
     </div>
   </div>
 </template>
@@ -98,7 +100,21 @@ export default {
   methods: {
     handleDotsClick() {
       this.$emit('options-click', this.componentProps.id)
-    }
+    },
+    handlePayload(payload) {
+      console.log("Payload recieved in Wrapper")
+       Object.assign(this.componentProps, payload)
+
+    // 🔥 Notify canvas of the payload
+    this.$emit('update-node-payload', {
+      fromId: this.componentProps.id,
+      payload
+    })
+  }
+
+
+
+
   },
   mounted() {
     this.$emit('register-connectors', this.componentProps.id, {
@@ -114,12 +130,11 @@ export default {
   border: 2px solid #444;
   border-radius: 4px;
   overflow: hidden;
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   font-family: sans-serif;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  width: fit-content;
-  max-width: 100%;
+  width: auto;
 }
 
 .node-header {
@@ -158,7 +173,10 @@ export default {
 
 .node-container {
   padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
+
 
 .connector-out,
 .connector-in {

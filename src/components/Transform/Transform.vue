@@ -1,16 +1,21 @@
 <template>
   <div class="transform-container">
-    <component :is="currentComponent" v-bind="componentProps" />
+        <component
+      :is="currentComponent"
+      v-bind="resolvedProps"
+      @update="onUpdate"
+    />
+
   </div>
 </template>
 
 <script>
-import RulesContent from './Rules/Vue/Rules.vue'
+import Rules from './Rules/Vue/Rules.vue'
 
 export default {
   name: 'Transform',
   components: {
-    RulesContent
+    Rules
   },
   props: {
     type: {
@@ -26,12 +31,23 @@ export default {
     currentComponent() {
       switch (this.type) {
         case 'Rules':
-          return 'Rules'
+          return Rules
         default:
           return null
       }
+    },
+    resolvedProps() {
+    switch (this.type) {
+      case 'Rules':
+        return {
+          nodes: this.componentProps.fieldTree || [],
+        }
+      default:
+        return {}
     }
+  }
   },
+  
   methods: {
     onUpdate(newRules) {
       this.componentProps.ruleTree = newRules
@@ -44,6 +60,7 @@ export default {
 
   <style scoped>
   .transform-container {
-    padding: 1rem;
+    min-width: 500px;
+    width: auto;
   }
   </style>
