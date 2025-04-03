@@ -1,43 +1,34 @@
 <template>
-    <div class="form-container">
-      <URLInput v-model="url" />
-  
-      <HeaderList v-model="headers" />
+  <div class="form-container">
+    <URLInput v-model="url" />
 
-      <button @click="getFormat">Get format ▶</button>
-  
-      <LoadingSpinner v-if="loadingFormat" />
-  
-      <FormatResult
-        :visible="showContentSection"
-        :loading="loadingFormat"
-        :renderedKey="renderedContentKey"
-        :jsonFormat="jsonFormat"
-        :fieldTree="fieldTree"
-        :editing="editingFields"
-        :onLeave="onContentLeft"
-        :toggleEditing="toggleFieldEditing"
-      />
-  
-      <LoadingSpinner
-        v-if="hasRenderedOnce && loadingFormat && !isTransitioningOut"
-      />
-    </div>
-  </template>
+    <HeaderList v-model="headers" />
+
+    <button @click="getFormat">Get format ▶</button>
+
+    <LoadingSpinner v-if="loadingFormat" />
+
+    <FormatResult :visible="showContentSection" :loading="loadingFormat" :renderedKey="renderedContentKey"
+      :jsonFormat="jsonFormat" :fieldTree="fieldTree" :editing="editingFields" :onLeave="onContentLeft"
+      :toggleEditing="toggleFieldEditing" />
+
+    <LoadingSpinner v-if="hasRenderedOnce && loadingFormat && !isTransitioningOut" />
+  </div>
+</template>
 
 <script setup lang="ts">
-  import { ref, toRaw, watch } from 'vue';
-  import URLInput from '../Vue/URLInput.vue';
-  import HeaderList from '../Vue/HeaderList.vue';
-  import FormatResult from '../Vue/FormatResult.vue';
-  import LoadingSpinner from '../Vue/LoadingSpinner.vue';
-  import { useFormatLoader } from '../Scripts/ExtractSelector';
-  import { type Header } from '../Scripts/useHeaders';
-  
+import { ref, toRaw, watch } from 'vue';
+import URLInput from '../Vue/URLInput.vue';
+import HeaderList from '../Vue/HeaderList.vue';
+import FormatResult from '../Vue/FormatResult.vue';
+import LoadingSpinner from '../Vue/LoadingSpinner.vue';
+import { useFormatLoader } from '../Scripts/ExtractSelector';
+import { type Header } from '../Scripts/useHeaders';
 
-  const emit = defineEmits(['update-payload'])
 
-  const url = ref('https://api.themoviedb.org/3/movie/550?language=en-US');
+const emit = defineEmits(['update-payload'])
+
+const url = ref('https://api.themoviedb.org/3/movie/550?language=en-US');
 const headers = ref<Header[]>([
   {
     key: 'Authorization',
@@ -86,36 +77,29 @@ const toggleFieldEditing = () => {
 const getFormat = () => {
   triggerFormatLoading(url.value, headers.value)
 
-  // Push fieldTree to connected transform nodes after loaded
-
-
-
-watch(
-  () => fieldTree.value,
-  (newTree) => {
-    if (newTree) {
-      console.log("Emitting blyat")
-      emit('update-payload', { fieldTree: toRaw(newTree) })
-    }
-  },
-  { immediate: true, deep: true }
-)
+  watch(
+    () => fieldTree.value,
+    (newTree) => {
+      if (newTree) {
+        console.log("Emitting blyat")
+        emit('update-payload', { fieldTree: toRaw(newTree) })
+      }
+    },
+    { immediate: true, deep: true }
+  )
 }
 
 const onContentLeft = () => loadFormatAfterTransition(url.value, headers.value);
-  </script>
-  
+</script>
 
-
-  <style scoped>
-  .form-container {
-    min-width: 500px;
-    max-width: 800px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    box-sizing: border-box;
-  }
-  </style>
-  
+<style scoped>
+.form-container {
+  min-width: 500px;
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-sizing: border-box;
+}
+</style>
