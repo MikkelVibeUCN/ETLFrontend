@@ -1,87 +1,37 @@
 <template>
-    <div
-      class="main-view"
-      :class="{ grabbing: state.cursor === 'grabbing' }"
-      ref="viewContainer"
-      @mousedown.right.prevent="handleMouseDown"
-      @mouseup.prevent="handleMouseUp"
-      @mousemove="handleMouseMove"
-      @contextmenu.prevent
-      @wheel.prevent="onWheel"
-    >
-      <div class="pan-zoom-container" :style="transformStyle">
-        <svg
-          class="connections-layer"
-          :width="containerSize.width"
-          :height="containerSize.height"
-        >
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="7"
-              refX="10"
-              refY="3.5"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3.5, 0 7" fill="#888" />
-            </marker>
-          </defs>
-  
-          <line
-            v-for="(edge, index) in edges"
-            :key="'edge-' + index"
-            :x1="edge.start.x"
-            :y1="edge.start.y"
-            :x2="edge.end.x"
-            :y2="edge.end.y"
-            stroke="#888"
-            stroke-width="2"
-            marker-end="url(#arrowhead)"
-          />
-  
-          <line
-            v-if="connectionStart"
-            :x1="connectionStart.x"
-            :y1="connectionStart.y"
-            :x2="mouse.x"
-            :y2="mouse.y"
-            stroke="#aaa"
-            stroke-dasharray="5,5"
-          />
-        </svg>
-  
-        <!-- ETL nodes -->
-        <div
-          v-for="(node, index) in nodes"
-          :key="node.id"
-          class="draggable"
-          :ref="el => setNodeRef(index, el)"
-          :data-id="node.id"
-          :style="{ transform: `translate(${node.x}px, ${node.y}px)` }"
-        >
-          <ETLNodeWrapper
-            :type="node.type"
-            :component-props="node"
-            @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
-            @dragstart="startNodeDrag(index, $event)"
-            @start-connection="handleStartConnection"
-            @finish-connection="handleFinishConnection"
-            @update-node-payload="handleNodePayload"
-          />
-        </div>
+  <div class="main-view" :class="{ grabbing: state.cursor === 'grabbing' }" ref="viewContainer"
+    @mousedown.right.prevent="handleMouseDown" @mouseup.prevent="handleMouseUp" @mousemove="handleMouseMove"
+    @contextmenu.prevent @wheel.prevent="onWheel">
+    <div class="pan-zoom-container" :style="transformStyle">
+      <svg class="connections-layer" :width="containerSize.width" :height="containerSize.height">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#888" />
+          </marker>
+        </defs>
+
+        <line v-for="(edge, index) in edges" :key="'edge-' + index" :x1="edge.start.x" :y1="edge.start.y"
+          :x2="edge.end.x" :y2="edge.end.y" stroke="#888" stroke-width="2" marker-end="url(#arrowhead)" />
+
+        <line v-if="connectionStart" :x1="connectionStart.x" :y1="connectionStart.y" :x2="mouse.x" :y2="mouse.y"
+          stroke="#aaa" stroke-dasharray="5,5" />
+      </svg>
+
+      <!-- ETL nodes -->
+      <div v-for="(node, index) in nodes" :key="node.id" class="draggable" :ref="el => setNodeRef(index, el)"
+        :data-id="node.id" :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
+        <ETLNodeWrapper :type="node.type" :component-props="node"
+          @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
+          @dragstart="startNodeDrag(index, $event)" @start-connection="handleStartConnection"
+          @finish-connection="handleFinishConnection" @update-node-payload="handleNodePayload" />
       </div>
-  
-      <ContextMenu
-        v-if="contextMenu.visible"
-        :x="contextMenu.x"
-        :y="contextMenu.y"
-        @add-node="handleAddNode"
-      />
     </div>
-  </template>
-  
-  <script setup lang="ts">
+
+    <ContextMenu v-if="contextMenu.visible" :x="contextMenu.x" :y="contextMenu.y" @add-node="handleAddNode" />
+  </div>
+</template>
+
+<script setup lang="ts">
 import { ref, reactive, onMounted, watchEffect, watch, type Ref, type Component, toRaw } from 'vue'
 import ContextMenu from './ContextMenu.vue'
 import ETLNodeWrapper from './ETLNodeWrapper.vue'
@@ -242,6 +192,13 @@ function handleFinishConnection(nodeId: number) {
       // Option 1: Watch later OR store pending links
     }
   }
+  if (fromNode?.group === 'transform' && toNode?.group === 'load') {
+    if (fromNode.fieldTree) {
+      const rawTree = toRaw(fromNode.fieldTree)
+      const filteredTree = filterSelectedFields(rawTree)
+      toNode.fieldTree = filteredTree
+    }
+  }
 
   connectionStart.value = null
   updateContainerBounds()
@@ -278,7 +235,7 @@ function animateEdgeUpdates() {
 }
 
 function handleNodePayload({ fromId, payload }: { fromId: number; payload: any }) {
-console.log("Payload recieved in canvas")
+  console.log("Payload recieved in canvas")
 
   const fromNode = nodes.value.find(n => n.id === fromId)
   if (!fromNode || !payload) return
@@ -325,58 +282,60 @@ watch(scale, () => {
 })
 watchEffect(() => {
   for (const fromNode of nodes.value) {
-    if (fromNode.group !== 'extract' || !fromNode.fieldTree) continue
+    if (!fromNode.fieldTree) continue
 
     const filteredTree = filterSelectedFields(toRaw(fromNode.fieldTree))
 
     for (const edge of edges.value) {
       if (edge.fromNodeId !== fromNode.id) continue
 
-      const toNode = nodes.value.find(n => n.id === edge.toNodeId && n.group === 'transform')
-      if (toNode) {
+      const toNode = nodes.value.find(n => n.id === edge.toNodeId)
+      if (!toNode) continue
+
+      if (
+        fromNode.group === 'transform' &&
+        toNode.group === 'load'
+      ) {
         toNode.fieldTree = filteredTree
       }
+
     }
   }
 })
+
 </script>
+<style scoped>
+.main-view {
+  flex: 1;
+  border: 3px solid #888;
+  overflow: hidden;
+  position: relative;
+  background-color: #1e1e1e;
+  user-select: none;
+  cursor: default;
+}
 
+.main-view.grabbing {
+  cursor: grabbing !important;
+}
 
+.pan-zoom-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
 
-  
-  <style scoped>
-  .main-view {
-    flex: 1;
-    border: 3px solid #888;
-    overflow: hidden;
-    position: relative;
-    background-color: #1e1e1e;
-    user-select: none;
-    cursor: default;
-  }
-  
-  .main-view.grabbing {
-    cursor: grabbing !important;
-  }
-  
-  .pan-zoom-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    transform-origin: 0 0;
-  }
-  
-  .draggable {
-    position: absolute;
-    will-change: transform;
-  }
-  
-  .connections-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    z-index: 200;
-  }
-  </style>
-  
+.draggable {
+  position: absolute;
+  will-change: transform;
+}
+
+.connections-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+</style>

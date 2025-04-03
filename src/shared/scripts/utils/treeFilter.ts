@@ -1,22 +1,31 @@
 import { type FieldNode } from "../jsonTreeBuilder"
 
+
+
 export function filterSelectedFields(tree: FieldNode[]): FieldNode[] {
-    return tree
-      .map(node => {
-        // Recursively filter children (if any)
-        const filteredChildren = node.children ? filterSelectedFields(node.children) : []
-  
-        // Include node if selected or it has any selected children
-        if (node.selected || filteredChildren.length > 0) {
-          return {
-            ...node,
-            children: filteredChildren.length > 0 ? filteredChildren : undefined
-          }
+  return tree
+    .map(node => {
+      const filteredChildren = node.children ? filterSelectedFields(node.children) : []
+
+      // Only include node if selected or it has any selected children
+      if (node.selected || filteredChildren.length > 0) {
+        const filteredNode: FieldNode = {
+          name: node.name,
+          selected: node.selected,
+          dataType: node.dataType,
+          children: filteredChildren.length ? filteredChildren : undefined,
         }
-  
-        // Otherwise, exclude it
-        return null
-      })
-      .filter(Boolean) as FieldNode[]
-  }
-  
+
+        // ✅ Include rules + ruleValues only if selected
+        if (node.selected) {
+          filteredNode.rules = node.rules ? [...node.rules] : []
+          filteredNode.ruleValues = node.ruleValues ? { ...node.ruleValues } : {}
+        }
+
+        return filteredNode
+      }
+
+      return null
+    })
+    .filter(Boolean) as FieldNode[]
+}

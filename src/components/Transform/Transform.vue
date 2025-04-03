@@ -1,7 +1,7 @@
 <template>
   <div class="transform-container">
-    <template v-if="isEmpty" class="empty-state">
-      <DefaultContent />
+    <template v-if="isEmpty">
+      <DefaultContentTransform />
     </template>
     <template v-else>
       <component
@@ -14,14 +14,14 @@
 </template>
 
 <script>
-import DefaultContent from './DefaultContent.vue'
 import Rules from './Rules/Vue/Rules.vue'
+import DefaultContentTransform from './DefaultContentTransform.vue'
 
 export default {
   name: 'Transform',
   components: {
     Rules,
-    DefaultContent,
+    DefaultContentTransform
   },
   props: {
     type: {
@@ -43,26 +43,29 @@ export default {
       }
     },
     resolvedProps() {
-      switch (this.type) {
-        case 'Rules':
-          return {
-            nodes: this.componentProps.fieldTree || [],
-          }
-        default:
-          return {}
+      if (this.type === 'Rules') {
+        return {
+          nodes: this.componentProps.fieldTree || []
+        }
       }
+      return {}
     },
     isEmpty() {
       return (
         this.type === 'Rules' &&
-        (!this.componentProps.fieldTree ||
-         this.componentProps.fieldTree.length === 0)
+        (!this.componentProps.fieldTree || this.componentProps.fieldTree.length === 0)
       )
     }
   },
   methods: {
-    onUpdate(newRules) {
-      this.componentProps.ruleTree = newRules
+    onUpdate(updatedTree) {
+      // Update the fieldTree in the current node
+      this.componentProps.fieldTree = updatedTree
+
+      // Emit update to downstream nodes via payload
+      this.$emit('update-payload', {
+        fieldTree: updatedTree
+      })
     }
   }
 }
@@ -80,8 +83,6 @@ export default {
   border-radius: 10px;
   background-color: #1a1a1a;
   color: #ccc;
-
   margin: 2rem auto;
-  width: auto;
 }
 </style>

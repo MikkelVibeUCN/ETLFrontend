@@ -1,6 +1,5 @@
 <template>
   <div class="rules-container">
-    <!-- Show rule nodes if available -->
     <template v-if="nodes && nodes.length">
       <div
         v-for="(node, index) in nodes"
@@ -13,9 +12,7 @@
         </div>
 
         <div v-if="node._expanded" class="dropdown-content">
-          <!-- Rule picker -->
           <div class="rules-list">
-            <!-- Existing rules -->
             <div
               v-for="(rule, i) in node.rules || []"
               :key="rule + i"
@@ -25,19 +22,15 @@
                 {{ getRuleDefinition(rule)?.label || rule }}
               </span>
 
-              <!-- Dynamic rule input, driven by config -->
+              <!-- Input types -->
               <template v-if="getInputDefinition(rule, node.dataType)">
                 <select
-                  v-if="
-                    getInputDefinition(rule, node.dataType)?.inputType ===
-                    'select'
-                  "
-                  v-model="ruleValues[node.name + '_' + rule]"
+                  v-if="getInputDefinition(rule, node.dataType)?.inputType === 'select'"
+                  v-model="getRuleValue(node, rule).value"
                   class="rule-input"
                 >
                   <option
-                    v-for="opt in getInputDefinition(rule, node.dataType)
-                      ?.options || []"
+                    v-for="opt in getInputDefinition(rule, node.dataType)?.options || []"
                     :key="opt"
                     :value="opt"
                   >
@@ -46,41 +39,29 @@
                 </select>
 
                 <input
-                  v-else-if="
-                    getInputDefinition(rule, node.dataType)?.inputType ===
-                    'text'
-                  "
-                  v-model="ruleValues[node.name + '_' + rule]"
+                  v-else-if="getInputDefinition(rule, node.dataType)?.inputType === 'text'"
+                  v-model="getRuleValue(node, rule).value"
                   type="text"
                   class="rule-input"
                 />
 
                 <input
-                  v-else-if="
-                    getInputDefinition(rule, node.dataType)?.inputType ===
-                    'number'
-                  "
-                  v-model.number="ruleValues[node.name + '_' + rule]"
+                  v-else-if="getInputDefinition(rule, node.dataType)?.inputType === 'number'"
+                  v-model.number="getRuleValue(node, rule).value"
                   type="number"
                   class="rule-input"
                 />
 
                 <input
-                  v-else-if="
-                    getInputDefinition(rule, node.dataType)?.inputType ===
-                    'checkbox'
-                  "
-                  v-model="ruleValues[node.name + '_' + rule]"
+                  v-else-if="getInputDefinition(rule, node.dataType)?.inputType === 'checkbox'"
+                  v-model="getRuleValue(node, rule).value"
                   type="checkbox"
                 />
               </template>
 
-              <button class="remove-btn" @click="removeRule(node, i)">
-                ✕
-              </button>
+              <button class="remove-btn" @click="removeRule(node, i)">✕</button>
             </div>
 
-            <!-- Add new rule -->
             <div class="add-row">
               <select v-model="newRule[node.name]">
                 <option disabled value="">Select rule</option>
@@ -96,7 +77,6 @@
             </div>
           </div>
 
-          <!-- Recursive children -->
           <div v-if="node.children?.length" class="child-section">
             <Rules :nodes="node.children" @update="emitChange" />
           </div>
@@ -106,93 +86,95 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, onMounted } from 'vue'
+import { defineProps, defineEmits, ref, onMounted, computed } from 'vue'
+import ruleConfig from '../Scripts/ruleConfig'
+import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder';
 
-interface FieldNode {
-  name: string
-  selected: boolean
-  dataType: string // ✅ Add this line
-  rule?: string
-  rules?: string[]
-  children?: FieldNode[]
-  _expanded?: boolean
-}
 
-const props = defineProps<{
-  nodes: FieldNode[]
-}>()
 
+const props = defineProps<{ nodes: FieldNode[] }>()
 const emit = defineEmits(['update'])
+
+const newRule = ref<Record<string, string>>({})
 
 function emitChange() {
   emit('update', props.nodes)
 }
 
-const ruleValues = ref<Record<string, any>>({})
-
-
-import ruleConfig from '../Scripts/ruleConfig'
-import DefaultContent from './DefaultContent.vue'
-
-function getRuleOptionsFor(node: FieldNode): string[] {
-  const baseRules = ruleConfig.typeRules[(node as any).dataType || 'string'] || []
-  const allRules = [...new Set([...baseRules, ...ruleConfig.globalRules])]
-  return allRules
+function toggle(node: FieldNode) {
+  node._expanded = !node._expanded
 }
 
 function getRuleDefinition(ruleKey: string) {
   return ruleConfig.ruleDefinitions[ruleKey]
 }
-const newRule = ref<Record<string, string>>({})
 
-function toggle(node: FieldNode) {
-  node._expanded = !node._expanded
+function getRuleOptionsFor(node: FieldNode): string[] {
+  const baseRules = ruleConfig.typeRules[node.dataType || 'string'] || []
+  return [...new Set([...baseRules, ...ruleConfig.globalRules])]
+}
+
+function getInputDefinition(ruleKey: string, dataType: string) {
+  const def = ruleConfig.ruleDefinitions[ruleKey]
+  return def?.inputTypeByDataType?.[dataType] || def
+}
+
+// Two-way binding for a rule value
+function getRuleValue(node: FieldNode, rule: string) {
+  const key = `${node.name}_${rule}`
+  if (!node.ruleValues) node.ruleValues = {}
+
+  return computed({
+    get: () => node.ruleValues![key],
+    set: (val) => {
+      node.ruleValues![key] = val
+      emitChange()
+    }
+  })
 }
 
 function addRule(node: FieldNode) {
   const rule = newRule.value[node.name]
   if (!rule) return
+
   if (!node.rules) node.rules = []
+  if (!node.ruleValues) node.ruleValues = {}
+
   if (node.rules.includes(rule)) return
 
   node.rules.push(rule)
   newRule.value[node.name] = ''
 
-  // ✅ Check if rule has a defaultValue
-  const ruleDef = getInputDefinition(rule, node.dataType)
-  if (ruleDef?.defaultValue !== undefined) {
-    let value = ruleDef.defaultValue
-
-    // Support special keyword
-    if (typeof value === 'string' && value === '$fieldName') {
-      value = node.name
-    }
-    ruleValues.value[node.name + '_' + rule] = value
+  const def = getInputDefinition(rule, node.dataType)
+  if (def?.defaultValue !== undefined) {
+    let value = def.defaultValue
+    if (value === '$fieldName') value = node.name
+    node.ruleValues[`${node.name}_${rule}`] = value
   }
+
   emitChange()
 }
 
-function getInputDefinition(ruleKey: string, dataType: string) {
-  const def = ruleConfig.ruleDefinitions[ruleKey]
-  if (!def) return null
-
-  if (def.inputTypeByDataType?.[dataType]) {
-    return def.inputTypeByDataType[dataType]
-  }
-
-  return def
-}
-
-
 function removeRule(node: FieldNode, index: number) {
-  node.rules?.splice(index, 1)
+  if (!node.rules) return
+  const removed = node.rules.splice(index, 1)[0]
+  if (removed && node.ruleValues) {
+    delete node.ruleValues[`${node.name}_${removed}`]
+  }
   emitChange()
 }
 
 onMounted(() => {
-  props.nodes.forEach(n => (n._expanded = false))
+  const init = (nodes: FieldNode[]) => {
+    nodes.forEach(n => {
+      if (!n.ruleValues) n.ruleValues = {}
+      if (!n.rules) n.rules = []
+      n._expanded = false
+      if (n.children?.length) init(n.children)
+    })
+  }
+  init(props.nodes)
 })
 </script>
 
@@ -206,14 +188,11 @@ onMounted(() => {
   padding: 1rem;
   border-radius: 12px;
   width: auto;
-  
 }
 
 .rule-node {
   border: 1px solid #444;
   border-radius: 10px;
-  overflow: hidden;
-  gap: 0.75rem;
   background-color: #2a2a2a;
 }
 
@@ -246,7 +225,6 @@ onMounted(() => {
   gap: 0.75rem;
 }
 
-/* Rule Rows */
 .rule-row {
   display: flex;
   align-items: center;
@@ -255,11 +233,6 @@ onMounted(() => {
   padding: 0.75rem;
   border-radius: 8px;
   box-shadow: inset 0 0 0 1px #3a3a3a;
-  transition: background-color 0.2s ease;
-}
-
-.rule-row:hover {
-  background-color: #353535;
 }
 
 .rule-label {
@@ -292,7 +265,6 @@ onMounted(() => {
   transform: scale(1.2);
 }
 
-/* Add Rule */
 .add-row {
   display: flex;
   gap: 0.5rem;
@@ -326,21 +298,9 @@ onMounted(() => {
   background-color: #555;
 }
 
-/* Children Recursion Section */
 .child-section {
   margin-top: 1rem;
   padding-left: 1rem;
   border-left: 2px dashed #444;
-}
-.empty-state {
-  padding: 2rem;
-  text-align: center;
-  border: 2px dashed #444;
-  border-radius: 10px;
-  background-color: #1a1a1a;
-  color: #ccc;
-
-  margin: 2rem auto;
-  width: auto;
 }
 </style>

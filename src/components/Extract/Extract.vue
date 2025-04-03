@@ -39,9 +39,6 @@ export default {
     }
   },
   methods: {
-    handleDotsClick() {
-      console.log('More options clicked');
-    },
     onPayload(payload) {
     console.log('[Extract] Forwarding update-payload:', payload)
     this.$emit('update-payload', payload)

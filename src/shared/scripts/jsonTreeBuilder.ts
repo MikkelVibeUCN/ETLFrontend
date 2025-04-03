@@ -1,10 +1,12 @@
 export interface FieldNode {
-  name: string;
-  selected: boolean;
-  dataType: string; // "string", "number", "boolean", "object", "list", or "null"
-  children?: FieldNode[];
+  name: string
+  selected: boolean
+  dataType: string
+  rules?: string[]
+  ruleValues?: Record<string, any>
+  children?: FieldNode[]
+  _expanded?: boolean
 }
-
 export function buildFieldTreeFromJson(json: any): FieldNode[] {
   function normalizeType(value: string): string {
     switch (value.toLowerCase()) {

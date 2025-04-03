@@ -1,4 +1,4 @@
-<<template>
+<template>
     <div class="main-wrapper">
       <div class="navbar">
         <h1 class="title">{{ title }}</h1>

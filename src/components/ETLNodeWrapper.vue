@@ -28,13 +28,15 @@ library.add(faGlobe, faCog, faDatabase, faFileAlt)
 // Component wrappers
 import Extract from './Extract/Extract.vue'
 import Transform from './Transform/Transform.vue'
+import Load from './Load/Load.vue'
 
 export default {
   name: 'ETLNodeWrapper',
   components: {
     FontAwesomeIcon,
     Extract,
-    Transform
+    Transform,
+    Load
   },
   props: {
     type: {
@@ -50,6 +52,7 @@ export default {
     nodeGroup() {
       if (['API', 'File'].includes(this.type)) return 'extract'
       if (['Rules'].includes(this.type)) return 'transform'
+      if(['Database'].includes(this.type)) return 'load'
       return 'unknown'
     },
     metadata() {
@@ -72,6 +75,15 @@ export default {
           },
           icons: {
             Rules: 'cog'
+          }
+        },
+        load: {
+          component: 'Load',
+          titles: {
+            Database:'Load to Database'
+          },
+          icons: {
+            Database: 'database'
           }
         }
       }
