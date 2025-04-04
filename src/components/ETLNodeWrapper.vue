@@ -1,7 +1,13 @@
 <template>
   <div class="node-wrapper">
-    <div class="connector-out" ref="connectorOut" @mousedown.stop="$emit('start-connection', componentProps.id)" />
-    <div class="connector-in" ref="connectorIn" @mouseup.stop="$emit('finish-connection', componentProps.id)" />
+    <!-- Show OUT connector for extract and transform -->
+    <div v-if="nodeGroup === 'extract' || nodeGroup === 'transform'" class="connector-out" ref="connectorOut"
+      @mousedown.stop="$emit('start-connection', componentProps.id)" />
+
+    <!-- Show IN connector for transform and load -->
+    <div v-if="nodeGroup === 'transform' || nodeGroup === 'load'" class="connector-in" ref="connectorIn"
+      @mouseup.stop="$emit('finish-connection', componentProps.id)" />
+
 
 
     <div class="node-header" @mousedown.left.stop="$emit('dragstart', $event)">
@@ -11,8 +17,7 @@
     </div>
 
     <div class="node-container">
-      <component :is="component" :type="type" :componentProps="componentProps"
-        @update-payload="handlePayload" />
+      <component :is="component" :type="type" :componentProps="componentProps" @update-payload="handlePayload" />
 
     </div>
   </div>
@@ -52,7 +57,7 @@ export default {
     nodeGroup() {
       if (['API', 'File'].includes(this.type)) return 'extract'
       if (['Rules'].includes(this.type)) return 'transform'
-      if(['Database'].includes(this.type)) return 'load'
+      if (['Database'].includes(this.type)) return 'load'
       return 'unknown'
     },
     metadata() {
@@ -80,7 +85,7 @@ export default {
         load: {
           component: 'Load',
           titles: {
-            Database:'Load to Database'
+            Database: 'Load to Database'
           },
           icons: {
             Database: 'database'
@@ -115,14 +120,14 @@ export default {
     },
     handlePayload(payload) {
       console.log("Payload recieved in Wrapper")
-       Object.assign(this.componentProps, payload)
+      Object.assign(this.componentProps, payload)
 
-    // 🔥 Notify canvas of the payload
-    this.$emit('update-node-payload', {
-      fromId: this.componentProps.id,
-      payload
-    })
-  }
+      // 🔥 Notify canvas of the payload
+      this.$emit('update-node-payload', {
+        fromId: this.componentProps.id,
+        payload
+      })
+    }
 
 
 
