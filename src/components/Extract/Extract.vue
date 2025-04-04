@@ -1,13 +1,7 @@
 <template>
-    <div class="extract-container">
-      <component
-  :is="currentComponent"
-  v-bind="componentProps"
-  @update-payload="onPayload"
-/>
-
-
-    </div>
+  <div class="extract-container">
+    <component :is="currentComponent" v-bind="componentProps" @update-payload="onPayload" ref="child"/>
+  </div>
 </template>
 
 <script>
@@ -40,15 +34,20 @@ export default {
   },
   methods: {
     onPayload(payload) {
-    console.log('[Extract] Forwarding update-payload:', payload)
-    this.$emit('update-payload', payload)
-  }
+      console.log('[Extract] Forwarding update-payload:', payload)
+      this.$emit('update-payload', payload)
+    },
+    getConfig() {
+      if (this.$refs.child && typeof this.$refs.child.getConfig === 'function') {
+        return this.$refs.child.getConfig()
+      }
+      return {}
+    }
   }
 }
 </script>
 
 <style scoped>
-
 .extract-container {
   padding: 1rem;
 }

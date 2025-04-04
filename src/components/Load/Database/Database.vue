@@ -9,7 +9,7 @@
             </option>
         </select>
 
-        <component :is="componentMap[selectedDb]" v-if="selectedDb" :fieldTree="fieldTree" />
+        <component :is="componentMap[selectedDb]" v-if="selectedDb" :fieldTree="fieldTree" ref="dbComponent"/>
 
     </div>
 </template>
@@ -25,8 +25,21 @@ defineProps<{
   fieldTree: FieldNode[]
 }>()
 
+defineExpose({
+  getConfig
+})
 
 const selectedDb = ref('')
+const dbComponent = ref()
+
+
+function getConfig() {
+  if (!selectedDb.value || !dbComponent.value?.getConfig) {
+    throw new Error('No database component loaded or missing getConfig.')
+  }
+
+  return dbComponent.value.getConfig()
+}
 
 const componentMap: Record<string, any> = {
     mysql: MySQLContent,

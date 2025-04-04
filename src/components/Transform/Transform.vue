@@ -5,6 +5,7 @@
     </template>
     <template v-else>
       <component
+        ref="child"
         :is="currentComponent"
         v-bind="resolvedProps"
         @update="onUpdate"
@@ -55,7 +56,8 @@ export default {
         this.type === 'Rules' &&
         (!this.componentProps.fieldTree || this.componentProps.fieldTree.length === 0)
       )
-    }
+    },
+    
   },
   methods: {
     onUpdate(updatedTree) {
@@ -66,6 +68,12 @@ export default {
       this.$emit('update-payload', {
         fieldTree: updatedTree
       })
+    },
+    getConfig() {
+      if (this.$refs.child && typeof this.$refs.child.getConfig === 'function') {
+        return this.$refs.child.getConfig()
+      }
+      return {}
     }
   }
 }

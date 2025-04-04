@@ -49,6 +49,39 @@ import { defineEmits } from 'vue'
 const nodes = inject<Ref<NodeData[]>>('nodes')
 const edges = inject<Ref<Edge[]>>('edges')
 
+defineExpose({
+  getConfig
+})
+
+function getConfig() {
+  const selectedFields = fieldTree.value
+    ? fieldTree.value.filter(field => field.selected).map(field => field.name)
+    : []
+
+  const resolvedHeaders = Object.fromEntries(
+    headers.value
+      .filter(h => h.key && h.value) // skip empty headers
+      .map(h => {
+        let fullValue = h.value
+        if (h.key === 'Authorization' && h.extra?.trim()) {
+          fullValue = `${h.value} ${h.extra}` // Combine e.g., Bearer + token
+        }
+        return [h.key, fullValue]
+      })
+  )
+
+  return {
+    Fields: selectedFields,
+    SourceInfo: {
+      $type: 'api',
+      Url: url.value,
+      Headers: resolvedHeaders
+    }
+  }
+}
+
+
+
 // Optional safety check
 if (!nodes || !edges) {
   throw new Error('nodes and edges must be provided by parent')
@@ -81,13 +114,13 @@ const getFormat = () => {
     () => fieldTree.value,
     (newTree) => {
       if (newTree) {
-        console.log("Emitting blyat")
         emit('update-payload', { fieldTree: toRaw(newTree) })
       }
     },
     { immediate: true, deep: true }
   )
 }
+
 
 const onContentLeft = () => loadFormatAfterTransition(url.value, headers.value);
 </script>

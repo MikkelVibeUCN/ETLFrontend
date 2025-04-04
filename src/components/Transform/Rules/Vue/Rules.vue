@@ -176,6 +176,60 @@ onMounted(() => {
   }
   init(props.nodes)
 })
+
+defineExpose({
+  getConfig
+})
+
+function getConfig() {
+  const mappings: { SourceField: string; TargetField: string }[] = []
+  const filters: { Field: string; Operator: string; Value: string }[] = []
+
+  const ruleDefs = ruleConfig.ruleDefinitions
+
+  const walk = (nodes: FieldNode[]) => {
+    for (const node of nodes) {
+      if (!node.selected) continue
+
+      const rules = node.rules || []
+
+      for (const ruleKey of rules) {
+        const fullKey = `${node.name}_${ruleKey}`
+        const def = ruleDefs[ruleKey]
+        const rawVal = node.ruleValues?.[fullKey]
+        const val = rawVal?.value ?? rawVal // support reactive or plain
+
+        if (val === undefined || val === null || val === '') continue
+
+        // If rule has defaultValue = $fieldName, treat as a mapping rule
+        if (def?.defaultValue === '$fieldName') {
+          mappings.push({
+            SourceField: node.name,
+            TargetField: val.toString()
+          })
+        } else {
+          filters.push({
+            Field: node.name,
+            Operator: ruleKey,
+            Value: val.toString()
+          })
+        }
+      }
+
+      if (node.children?.length) {
+        walk(node.children)
+      }
+    }
+  }
+
+  walk(props.nodes)
+
+  return {
+    Mappings: mappings,
+    Filters: filters
+  }
+}
+
 </script>
 
 <style scoped>

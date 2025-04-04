@@ -1,6 +1,7 @@
 <template>
     <div class="load-container">
       <component
+      ref="child"
         :is="currentComponent"
         v-bind="resolvedProps"
       />
@@ -10,6 +11,7 @@
   <script>
   import Database from './Database/Database.vue'
   
+
   export default {
     name: 'Load',
     components: {
@@ -44,6 +46,14 @@
             return {}
         }
       }
+    },
+    methods: {
+      getConfig() {
+      if (this.$refs.child && typeof this.$refs.child.getConfig === 'function') {
+        return this.$refs.child.getConfig()
+      }
+      return {}
+    }
     }
   }
   </script>

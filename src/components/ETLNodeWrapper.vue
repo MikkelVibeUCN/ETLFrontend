@@ -1,14 +1,10 @@
 <template>
   <div class="node-wrapper">
-    <!-- Show OUT connector for extract and transform -->
     <div v-if="nodeGroup === 'extract' || nodeGroup === 'transform'" class="connector-out" ref="connectorOut"
       @mousedown.stop="$emit('start-connection', componentProps.id)" />
 
-    <!-- Show IN connector for transform and load -->
     <div v-if="nodeGroup === 'transform' || nodeGroup === 'load'" class="connector-in" ref="connectorIn"
       @mouseup.stop="$emit('finish-connection', componentProps.id)" />
-
-
 
     <div class="node-header" @mousedown.left.stop="$emit('dragstart', $event)">
       <font-awesome-icon :icon="icon" class="icon" />
@@ -17,7 +13,8 @@
     </div>
 
     <div class="node-container">
-      <component :is="component" :type="type" :componentProps="componentProps" @update-payload="handlePayload" />
+      <component :is="component" :type="type" :componentProps="componentProps" @update-payload="handlePayload"
+      ref="innerComponentRef" />
 
     </div>
   </div>
@@ -127,11 +124,10 @@ export default {
         fromId: this.componentProps.id,
         payload
       })
-    }
-
-
-
-
+    },
+    getConfig() {
+      return this.$refs.innerComponentRef?.getConfig?.()
+  }
   },
   mounted() {
     this.$emit('register-connectors', this.componentProps.id, {

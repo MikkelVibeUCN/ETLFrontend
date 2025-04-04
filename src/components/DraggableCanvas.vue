@@ -18,9 +18,11 @@
       </svg>
 
       <!-- ETL nodes -->
-      <div v-for="(node, index) in nodes" :key="node.id" class="draggable" :ref="el => setNodeRef(index, el)"
+      <div v-for="(node, index) in nodes" :key="node.id" class="draggable" 
         :data-id="node.id" :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
-        <ETLNodeWrapper :type="node.type" :component-props="node"
+        <ETLNodeWrapper 
+        :ref="handleSetNodeRef(index)"
+          :type="node.type" :component-props="node"
           @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
           @dragstart="startNodeDrag(index, $event)" @start-connection="handleStartConnection"
           @finish-connection="handleFinishConnection" @update-node-payload="handleNodePayload" />
@@ -32,19 +34,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watchEffect, watch, type Ref, type Component, toRaw } from 'vue'
+import { ref, reactive, onMounted, watchEffect, watch, type Ref, type ComponentPublicInstance, type Component, toRaw } from 'vue'
 import ContextMenu from './ContextMenu.vue'
 import ETLNodeWrapper from './ETLNodeWrapper.vue'
 import { useCanvasControls } from './Extract/Scripts/useCanvasControls'
 import { addNode } from '../shared/scripts/utils/addNode'
 import type { NodeData, ContextMenuData } from '../shared/types/canva'
-
-
 import { provide } from 'vue'
 import { filterSelectedFields } from '../shared/scripts/utils/treeFilter'
-
-
-
+import { type ETLComponent, CreateConfig } from '../shared/scripts/createConfig'
 
 const viewContainer = ref<HTMLElement | null>(null)
 const nodes = ref<NodeData[]>([])
@@ -68,12 +66,38 @@ export interface Edge {
   end: { x: number; y: number }
 }
 
+
+
+
 const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])
 const connectorMap = new Map<number, ConnectorRefs>()
 
-function setNodeRef(index: number, el: Element | Component | null) {
-  nodeRefs.value[index] = el instanceof HTMLElement ? el : null
+const nodeComponents: Ref<(Component | null)[]> = ref([])
+
+function handleSetNodeRef(index: number) {
+  return (el: Element | ComponentPublicInstance | null) => {
+    nodeRefs.value[index] = el instanceof HTMLElement ? el : null
+
+    if (el && typeof el === 'object' && 'getConfig' in el && typeof (el as any).getConfig === 'function') {
+      nodeComponents.value[index] = el as ETLComponent
+    } else {
+      nodeComponents.value[index] = null
+    }
+  }
 }
+const exportPipeline = () => {
+  try {
+    const configBuilder = new CreateConfig(nodes.value, nodeComponents.value)
+    const config = configBuilder.build() // no ID passed
+    console.log('Pipeline config:', JSON.stringify(config, null, 2))
+  } catch (err) {
+    console.error('Failed to build config:', err)
+  }
+}
+
+defineExpose({
+  exportPipeline
+})
 
 const contextMenu = reactive<ContextMenuData>({
   visible: false,
@@ -204,7 +228,6 @@ function handleFinishConnection(nodeId: number) {
   updateContainerBounds()
 }
 
-
 function updateEdgePositions() {
   const containerRect = viewContainer.value?.getBoundingClientRect()
   if (!containerRect) return
@@ -258,9 +281,6 @@ function handleNodePayload({ fromId, payload }: { fromId: number; payload: any }
     }
   }
 }
-
-
-
 
 onMounted(() => {
   updateContainerBounds()

@@ -1,26 +1,22 @@
 <template>
-    <div class="main-wrapper">
-      <div class="navbar">
-        <h1 class="title">{{ title }}</h1>
-        <div class="navbar-items">
-          <div
-            class="navbar-item"
-            v-for="(navItem, i) in navbarItems"
-            :key="i"
-            @click="navItem.clickEvent"
-          >
-            <img class="icon" :src="navItem.iconPath" />
-            <span class="navbar-item-label">{{ navItem.name }}</span>
-          </div>
+  <div class="main-wrapper">
+    <div class="navbar">
+      <h1 class="title">{{ title }}</h1>
+      <div class="navbar-items">
+        <div class="navbar-item" v-for="(navItem, i) in navbarItems" :key="i" @click="navItem.clickEvent">
+          <img class="icon" :src="navItem.iconPath" />
+          <span class="navbar-item-label">{{ navItem.name }}</span>
         </div>
       </div>
-  
-      <DraggableCanvas/>
     </div>
-  </template>
-  
-  
-  <script lang="ts">
+
+    <DraggableCanvas ref="canvasRef" />
+
+  </div>
+</template>
+
+
+<script lang="ts">
 import DraggableCanvas from '../components/DraggableCanvas.vue'
 import Extract from '../components/Extract/Extract.vue'
 import Transform from '../components/Transform/Transform.vue';
@@ -48,7 +44,14 @@ export default {
   },
   methods: {
     save() {
-      console.log("Save clicked")
+      const canvas = this.$refs.canvasRef as { exportPipeline: () => any }
+
+      if (canvas) {
+        const config = canvas.exportPipeline()
+        console.log("Config from DraggableCanvas:", config)
+      } else {
+        console.warn("DraggableCanvas ref not found")
+      }
     },
     discard() {
       console.log("Discard clicked")
@@ -63,8 +66,8 @@ export default {
 }
 </script>
 
-  
-  <style scoped>
+
+<style scoped>
 .main-wrapper {
   display: flex;
   flex-direction: column;
