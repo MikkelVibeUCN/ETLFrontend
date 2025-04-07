@@ -99,3 +99,39 @@ export async function addNode(
   nodes.value.push(newNode)
   contextMenu.visible = false
 }
+
+export const addNodeFromVersion = (
+  version: string,
+  configPart: any
+): number => {
+  const def = findNodeDefinition(version)
+
+  if (!def || !def.enabled) {
+    throw new Error(`Node version "${version}" is not enabled or doesn't exist`)
+  }
+
+  const id = nodeId++
+
+  const node: NodeData = {
+    id,
+    type: version,        // e.g., "API", "Rules"
+    title: def.title,
+    icon: def.icon,
+    group: def.group,
+    x,
+    y: 200,
+    fieldTree: undefined
+  }
+
+  nodes.value.push(node)
+
+  nextTick(() => {
+    const comp = nodeComponents.value[nodes.value.length - 1]
+    if (comp && typeof comp.setConfig === 'function') {
+      comp.setConfig(configPart)
+    }
+  })
+
+  x += 350
+  return id
+}

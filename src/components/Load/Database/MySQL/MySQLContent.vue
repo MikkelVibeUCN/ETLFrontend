@@ -92,6 +92,7 @@
 <script lang="ts" setup>
 import { ref, computed, watch, watchEffect } from 'vue'
 import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder'
+import { type LoadConfig } from '../../loadConfig';
 
 const props = defineProps<{ fieldTree: FieldNode[] }>()
 
@@ -117,7 +118,8 @@ const fieldNodes = ref<FieldNode[]>([])
 
 
 defineExpose({
-  getConfig
+  getConfig,
+  setConfig
 })
 
 function getConfig() {
@@ -142,7 +144,57 @@ function getConfig() {
   }
 }
 
+function setConfig(config: LoadConfig) {
+  const info = config.LoadTargetConfig?.TargetInfo;
+  const tables = config.LoadTargetConfig?.Tables || [];
 
+  if (info?.ConnectionString) {
+    const parts = Object.fromEntries(info.ConnectionString.split(';')
+      .filter(Boolean)
+      .map(part => part.split('=')));
+
+    host.value = parts.Server || '';
+    port.value = Number(parts.Port || 3306);
+    user.value = parts['User Id'] || '';
+    password.value = parts.Password || '';
+    database.value = parts.Database || '';
+  }
+
+  loadMode.value = info?.LoadMode || 'append';
+  connected.value = true;
+
+  // Wait until fieldNodes is populated (fieldTree from props)
+  const stop = watch(
+    () => fieldNodes.value.length,
+    (len) => {
+      if (len > 0) {
+        mappedTables.value = tables.map(t => ({
+          name: t.TargetTable,
+          fields: t.Fields.map(path => {
+            const found = findFieldByPath(path);
+
+            // fallback if field not found
+            return found
+              ? { ...found, path }
+              : {
+                  name: path.split('.').pop() || path,
+                  path,
+                  selected: false,
+                  dataType: 'unknown',
+                  rules: [],
+                  ruleValues: {},
+                  children: [],
+                  _expanded: false
+                };
+          })
+        }));
+
+        stop(); // Only run once
+      }
+    },
+    { immediate: true }
+  );
+}
 watch(
   () => props.fieldTree,
   (newVal) => {

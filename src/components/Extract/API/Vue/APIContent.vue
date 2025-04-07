@@ -30,15 +30,6 @@ const emit = defineEmits(['update-payload'])
 
 const url = ref('https://api.themoviedb.org/3/movie/550?language=en-US');
 const headers = ref<Header[]>([
-  {
-    key: 'Authorization',
-    value: 'Bearer',
-    extra: ''
-  },
-  {
-    key: 'Accept',
-    value: 'application/json'
-  }
 ]);
 
 import { inject, type Ref } from 'vue'
@@ -46,11 +37,14 @@ import type { NodeData } from '../../../../shared/types/canva';
 import type { Edge } from '../../../DraggableCanvas.vue';
 import { defineEmits } from 'vue'
 
+import { type ExtractConfig } from '../../Scripts/extractConfig';
+
 const nodes = inject<Ref<NodeData[]>>('nodes')
 const edges = inject<Ref<Edge[]>>('edges')
 
 defineExpose({
-  getConfig
+  getConfig,
+  setConfig
 })
 
 function getConfig() {
@@ -106,7 +100,52 @@ const toggleFieldEditing = () => {
   editingFields.value = !editingFields.value;
 };
 
-// These now pass both arguments correctly
+function setConfig(config: ExtractConfig) {
+  if (!config) return;
+
+  // 1. Set URL and Headers
+  url.value = config.SourceInfo?.Url || '';
+
+  const rawHeaders = config.SourceInfo?.Headers || {};
+  headers.value = Object.entries(rawHeaders).map(([key, value]) => {
+    if (key === 'Authorization') {
+      const [prefix, ...rest] = value.split(' ');
+      return {
+        key,
+        value: prefix,
+        extra: rest.join(' ')
+      };
+    } else {
+      return { key, value, extra: '' };
+    }
+  });
+
+  const selectedFields = config.Fields || [];
+
+  // 2. Trigger getFormat (async loads the fieldTree)
+  triggerFormatLoading(url.value, headers.value);
+
+  // 3. Watch for fieldTree to be loaded, then apply selected fields
+  const stopWatch = watch(
+    () => fieldTree.value,
+    (tree) => {
+      if (tree && tree.length > 0 && selectedFields.length > 0) {
+        fieldTree.value = tree.map(field => ({
+          ...field,
+          selected: selectedFields.includes(field.name)
+        }));
+
+        // Optionally emit updated tree to parent
+        emit('update-payload', { fieldTree: toRaw(fieldTree.value) });
+
+        stopWatch(); // Only once
+      }
+    },
+    { immediate: true, deep: true }
+  );
+}
+
+
 const getFormat = () => {
   triggerFormatLoading(url.value, headers.value)
 

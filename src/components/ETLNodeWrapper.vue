@@ -14,7 +14,7 @@
 
     <div class="node-container">
       <component :is="component" :type="type" :componentProps="componentProps" @update-payload="handlePayload"
-      ref="innerComponentRef" />
+        ref="innerComponentRef" />
 
     </div>
   </div>
@@ -119,7 +119,6 @@ export default {
       console.log("Payload recieved in Wrapper")
       Object.assign(this.componentProps, payload)
 
-      // 🔥 Notify canvas of the payload
       this.$emit('update-node-payload', {
         fromId: this.componentProps.id,
         payload
@@ -127,7 +126,10 @@ export default {
     },
     getConfig() {
       return this.$refs.innerComponentRef?.getConfig?.()
-  }
+    },
+    setConfig(config) {
+      this.$refs.innerComponentRef?.setConfig?.(config)
+    }
   },
   mounted() {
     this.$emit('register-connectors', this.componentProps.id, {

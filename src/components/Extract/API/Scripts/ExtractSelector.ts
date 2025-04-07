@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { fetchJsonWithHeaders, formatHeaders, simplifyJsonStructure } from '../../../../shared/scripts/fetchFormat';
+import { JSONFormatService } from '../../../../shared/scripts/Services/JSONFormatService';
 import { buildFieldTreeFromJson, type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder';
 
 export function useFormatLoader() {
@@ -13,10 +13,9 @@ export function useFormatLoader() {
     const showContentSection = ref(false);
 
     // Core data fetching logic
-    const fetchAndProcessFormat = async (url: string, headers: any[]) => {
-        const response = await fetchJsonWithHeaders(url, formatHeaders(headers));
-        const simplified = simplifyJsonStructure(response);
-        
+    const fetchJSONFormat = async (url: string, headers: any[]) => {
+        const simplified = await JSONFormatService.fetchJsonStructure(url, headers);
+
         jsonFormat.value = JSON.stringify(simplified, null, 2);
         fieldTree.value = buildFieldTreeFromJson(simplified);
     };
@@ -27,7 +26,7 @@ export function useFormatLoader() {
         showContentSection.value = true;
 
         try {
-            await fetchAndProcessFormat(url, headers);
+            await fetchJSONFormat(url, headers);
         } catch (error) {
             console.error('Error loading format:', error);
             showContentSection.value = false;
@@ -45,7 +44,7 @@ export function useFormatLoader() {
         loadingFormat.value = true;
 
         try {
-            await fetchAndProcessFormat(url, headers);
+            await fetchJSONFormat(url, headers);
         } catch (error) {
             console.error('Error loading format (post-transition):', error);
             showContentSection.value = false;
