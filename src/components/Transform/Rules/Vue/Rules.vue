@@ -258,7 +258,10 @@ function setConfig(config: TransformConfig) {
     for (const node of nodes) {
       node.rules = []
       node.ruleValues = node.ruleValues || {}
-      node._expanded = true
+      
+      // Set _expanded to true only if the node has rules
+      const hasRules = (mapByField.get(node.name)?.length || 0) > 0 || (filterByField.get(node.name)?.length || 0) > 0;
+      node._expanded = hasRules;
 
       // 🧠 1. Apply Mapping (e.g. "change_name" rule)
       const mappings = mapByField.get(node.name) || []
@@ -290,6 +293,7 @@ function setConfig(config: TransformConfig) {
   applyRules(props.nodes)
   emit('update', props.nodes)
 }
+
 
 </script>
 

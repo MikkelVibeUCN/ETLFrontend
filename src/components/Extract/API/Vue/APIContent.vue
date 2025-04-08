@@ -130,10 +130,24 @@ function setConfig(config: ExtractConfig) {
     () => fieldTree.value,
     (tree) => {
       if (tree && tree.length > 0 && selectedFields.length > 0) {
-        fieldTree.value = tree.map(field => ({
-          ...field,
-          selected: selectedFields.includes(field.name)
-        }));
+        fieldTree.value = tree.map(field => {
+          // If the field is an object, uncheck its children
+          const isObject = field.children && field.children.length > 0;
+          const updatedField = {
+            ...field,
+            selected: selectedFields.includes(field.name)
+          };
+
+          // If the field is an object, uncheck all of its children
+          if (isObject && field.children) {
+            updatedField.children = field.children.map(child => ({
+              ...child,
+              selected: false  // Uncheck all children
+            }));
+          }
+
+          return updatedField;
+        });
 
         // Optionally emit updated tree to parent
         emit('update-payload', { fieldTree: toRaw(fieldTree.value) });

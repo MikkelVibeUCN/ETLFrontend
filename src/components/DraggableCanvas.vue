@@ -18,10 +18,9 @@
       </svg>
 
       <!-- ETL nodes -->
-      <div v-for="(node, index) in nodes" :key="node.id" class="draggable" 
-        :data-id="node.id" :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
-        <ETLNodeWrapper 
-        :ref="handleSetNodeRef(index)"
+      <div v-for="(node, index) in nodes" :key="node.id" class="draggable" :data-id="node.id"
+        :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
+        <ETLNodeWrapper :ref="(el: HTMLElement | ComponentPublicInstance | null) => handleSetNodeRef(el, index)"
           :type="node.type" :component-props="node"
           @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
           @dragstart="startNodeDrag(index, $event)" @start-connection="handleStartConnection"
@@ -43,6 +42,7 @@ import type { NodeData, ContextMenuData } from '../shared/types/canva'
 import { provide } from 'vue'
 import { filterSelectedFields } from '../shared/scripts/utils/treeFilter'
 import { type ETLComponent, CreateConfig } from '../shared/scripts/createConfig'
+import type { PipelineConfig } from '../shared/scripts/PipelineConfig'
 
 const viewContainer = ref<HTMLElement | null>(null)
 const nodes = ref<NodeData[]>([])
@@ -68,23 +68,24 @@ export interface Edge {
 
 
 
-
-const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])
 const connectorMap = new Map<number, ConnectorRefs>()
 
-const nodeComponents: Ref<(Component | null)[]> = ref([])
+const nodeComponents: Ref<(InstanceType<typeof ETLNodeWrapper> | null)[]> = ref([]);
+const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])
 
-function handleSetNodeRef(index: number) {
-  return (el: Element | ComponentPublicInstance | null) => {
-    nodeRefs.value[index] = el instanceof HTMLElement ? el : null
+// Update handleSetNodeRef to accept the el parameter
+function handleSetNodeRef(el: HTMLElement | ComponentPublicInstance | null, index: number) {
+  nodeRefs.value[index] = el instanceof HTMLElement ? el : null;
 
-    if (el && typeof el === 'object' && 'getConfig' in el && typeof (el as any).getConfig === 'function') {
-      nodeComponents.value[index] = el as ETLComponent
-    } else {
-      nodeComponents.value[index] = null
-    }
+  if (el && typeof el === 'object' && '$refs' in el) {
+    nodeComponents.value[index] = el as InstanceType<typeof ETLNodeWrapper>;
+  } else {
+    nodeComponents.value[index] = null;
   }
 }
+
+
+
 const exportPipeline = () => {
   try {
     const configBuilder = new CreateConfig(nodes.value, nodeComponents.value)
@@ -94,9 +95,69 @@ const exportPipeline = () => {
     console.error('Failed to build config:', err)
   }
 }
+import { type ExtractConfig } from './Extract/Scripts/extractConfig'
+import { nextTick } from 'vue';
+import type { TransformConfig } from './Transform/transformConfig'
+import type { LoadConfig } from './Load/loadConfig'
+
+async function loadFromPipelineConfig(config: PipelineConfig) {
+  const extractConfig = config.ExtractConfig as ExtractConfig;
+  const transformConfig = config.TransformConfig as TransformConfig;
+  const loadConfig = config.LoadTargetConfig as LoadConfig;
+
+  // Handle the extract node
+  extractConfig.SourceInfo = config.SourceInfo;
+  const sourceInfo = config.SourceInfo;
+  await addNode(sourceInfo.$type, contextMenu, nodes);
+
+  nextTick(() => {
+    const nodeComponent = nodeComponents.value[nodes.value.length - 1];
+    if (nodeComponent) {
+      nodeComponent.setConfig(extractConfig);
+    }
+  });
+
+  await addNode('rules', contextMenu, nodes); 
+
+  nextTick(() => {
+    const nodeComponent = nodeComponents.value[nodes.value.length - 1];
+    if (nodeComponent) {
+      nodeComponent.setConfig(transformConfig);
+    }
+  });
+
+  const extractNode = nodes.value.find((node) => node.group === 'extract');
+  const transformNode = nodes.value.find((node) => node.group === 'transform');
+
+  if (extractNode && transformNode) {
+    handleStartConnection(extractNode.id);
+    handleFinishConnection(transformNode.id);
+  }
+
+
+  await addNode('database', contextMenu, nodes);
+
+  nextTick(() => {
+    const nodeComponent = nodeComponents.value[nodes.value.length - 1];
+    if (nodeComponent) {
+      nodeComponent.setConfig(loadConfig);
+    }
+  });
+
+  const loadNode = nodes.value.find((node) => node.group === 'load');
+
+  if (transformNode && loadNode) {
+    handleStartConnection(transformNode.id);
+    handleFinishConnection(loadNode.id);
+  }
+  contextMenu.visible = false;
+  updateContainerBounds();
+}
+
 
 defineExpose({
-  exportPipeline
+  exportPipeline,
+  loadFromPipelineConfig
 })
 
 const contextMenu = reactive<ContextMenuData>({

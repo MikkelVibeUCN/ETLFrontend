@@ -34,7 +34,7 @@ const selectedDb = ref('')
 const dbComponent = ref()
 
 function setConfig(config: LoadConfig) {
-  const dbType = config?.LoadTargetConfig?.TargetInfo?.$type
+  const dbType = config?.TargetInfo?.$type
 
   if (!dbType || !componentMap[dbType]) {
     console.warn(`[Database] Unsupported or unknown database type: "${dbType}"`)

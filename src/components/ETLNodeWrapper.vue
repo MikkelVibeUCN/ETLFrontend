@@ -52,9 +52,9 @@ export default {
   },
   computed: {
     nodeGroup() {
-      if (['API', 'File'].includes(this.type)) return 'extract'
-      if (['Rules'].includes(this.type)) return 'transform'
-      if (['Database'].includes(this.type)) return 'load'
+      if (['api', 'file'].includes(this.type)) return 'extract'
+      if (['rules'].includes(this.type)) return 'transform'
+      if (['database'].includes(this.type)) return 'load'
       return 'unknown'
     },
     metadata() {
@@ -62,30 +62,30 @@ export default {
         extract: {
           component: 'Extract',
           titles: {
-            API: 'Extract from API',
-            File: 'Extract from File'
+            api: 'Extract from API',
+            file: 'Extract from File'
           },
           icons: {
-            API: 'globe',
-            File: 'file-alt'
+            api: 'globe',
+            file: 'file-alt'
           }
         },
         transform: {
           component: 'Transform',
           titles: {
-            Rules: 'Transform Rules'
+            rules: 'Transform Rules'
           },
           icons: {
-            Rules: 'cog'
+            rules: 'cog'
           }
         },
         load: {
           component: 'Load',
           titles: {
-            Database: 'Load to Database'
+            database: 'Load to Database'
           },
           icons: {
-            Database: 'database'
+            database: 'database'
           }
         }
       }

@@ -2,6 +2,8 @@ import { nextTick, type Ref } from 'vue'
 import { isOverlapping, getNodeRect, type Rect } from './geometry'
 import type { NodeData, ContextMenuData } from '../../types/canva'
 import { findNodeDefinition } from '../../types/nodeRegistry'
+import ETLNodeWrapper from '../../../components/ETLNodeWrapper.vue'
+
 
 let nextNodeId = 1 // global counter
 
@@ -62,8 +64,6 @@ function findValidNodePosition(
   }
 }
 
-
-
 export async function addNode(
   type: string,
   contextMenu: ContextMenuData,
@@ -98,40 +98,4 @@ export async function addNode(
 
   nodes.value.push(newNode)
   contextMenu.visible = false
-}
-
-export const addNodeFromVersion = (
-  version: string,
-  configPart: any
-): number => {
-  const def = findNodeDefinition(version)
-
-  if (!def || !def.enabled) {
-    throw new Error(`Node version "${version}" is not enabled or doesn't exist`)
-  }
-
-  const id = nodeId++
-
-  const node: NodeData = {
-    id,
-    type: version,        // e.g., "API", "Rules"
-    title: def.title,
-    icon: def.icon,
-    group: def.group,
-    x,
-    y: 200,
-    fieldTree: undefined
-  }
-
-  nodes.value.push(node)
-
-  nextTick(() => {
-    const comp = nodeComponents.value[nodes.value.length - 1]
-    if (comp && typeof comp.setConfig === 'function') {
-      comp.setConfig(configPart)
-    }
-  })
-
-  x += 350
-  return id
 }

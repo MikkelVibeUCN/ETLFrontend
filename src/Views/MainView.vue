@@ -20,6 +20,7 @@
 import DraggableCanvas from '../components/DraggableCanvas.vue'
 import Extract from '../components/Extract/Extract.vue'
 import Transform from '../components/Transform/Transform.vue';
+import type { PipelineConfig } from '../shared/scripts/PipelineConfig';
 
 export default {
   name: 'MainView',
@@ -44,25 +45,118 @@ export default {
   },
   methods: {
     save() {
-      const canvas = this.$refs.canvasRef as { exportPipeline: () => any }
+      const canvas = this.$refs.canvasRef as { loadFromPipelineConfig: (config: PipelineConfig) => any }
 
       if (canvas) {
-        const config = canvas.exportPipeline()
-        console.log("Config from DraggableCanvas:", config)
-      } else {
-        console.warn("DraggableCanvas ref not found")
-      }
-    },
-    discard() {
-      console.log("Discard clicked")
-    },
-    showTemplates() {
-      console.log("Show templates")
-    },
-    showHelp() {
-      console.log("Show help")
+        var config = {
+          "Id": "",
+          "SourceInfo": {
+            "$type": "api",
+            "Url": "https://api.themoviedb.org/3/movie/550?language=en-US",
+            "Headers": {
+              "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzY2ZjNWNmNGM4YzcxYTZiNjE0MmM0ODQxNWFjN2U5OCIsIm5iZiI6MTc0MjU3MDc2Ni42NjEsInN1YiI6IjY3ZGQ4NTBlMDQxNjg3NWFkYzY5OGRhZCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Wpozuz_n15UxNbi06eooyI5pd41zdAK1BN0LxexZAUg"
+            }
+          },
+          "ExtractConfig": {
+            "Fields": [
+              "adult",
+              "backdrop_path",
+              "belongs_to_collection",
+              "budget",
+              "homepage",
+              "id",
+              "imdb_id",
+              "origin_country",
+              "original_language",
+              "original_title",
+              "overview",
+              "popularity",
+              "poster_path",
+              "release_date",
+              "revenue",
+              "status",
+              "tagline",
+              "title",
+              "video",
+              "vote_average",
+              "vote_count"
+            ],
+            "Filters": []
+          },
+          "TransformConfig": {
+            "Mappings": [
+              {
+                "SourceField": "origin_country",
+                "TargetField": "newcountry"
+              }
+            ],
+            "Filters": [
+              {
+                "Field": "original_language",
+                "Operator": "equals",
+                "Value": "us"
+              }
+            ]
+          },
+          "LoadTargetConfig": {
+            "TargetInfo": {
+              "$type": "mysql",
+              "ConnectionString": "Server=1212121;Port=3306;User Id=user;Password=password;Database=mydatabase;",
+              "LoadMode": "append"
+            },
+            "Tables": [
+              {
+                "TargetTable": "table1",
+                "Fields": [
+                  "origin_country",
+                  "original_language",
+                  "original_title",
+                  "overview",
+                  "popularity",
+                  "poster_path",
+                  "release_date",
+                  "revenue",
+                  "status",
+                  "tagline",
+                  "title",
+                  "video",
+                  "vote_average",
+                  "vote_count"
+                ]
+              },
+              {
+                "TargetTable": "table2",
+                "Fields": [
+                  "adult",
+                  "backdrop_path",
+                  "belongs_to_collection",
+                  "budget",
+                  "homepage",
+                  "id",
+                  "imdb_id"
+                ]
+              }
+            ]
+          }
+        }
+      canvas.loadFromPipelineConfig(config as PipelineConfig)
+
+
+
+    } else {
+      console.warn("DraggableCanvas ref not found")
     }
+  },
+  discard() {
+    console.log("Discard clicked")
+  },
+  showTemplates() {
+    console.log("Show templates")
+  },
+  showHelp() {
+    console.log("Show help")
   }
+}
 }
 </script>
 

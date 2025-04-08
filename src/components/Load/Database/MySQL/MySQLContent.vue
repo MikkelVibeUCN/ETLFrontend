@@ -145,8 +145,8 @@ function getConfig() {
 }
 
 function setConfig(config: LoadConfig) {
-  const info = config.LoadTargetConfig?.TargetInfo;
-  const tables = config.LoadTargetConfig?.Tables || [];
+  const info = config.TargetInfo;
+  const tables = config.Tables || [];
 
   if (info?.ConnectionString) {
     const parts = Object.fromEntries(info.ConnectionString.split(';')
