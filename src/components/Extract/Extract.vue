@@ -25,7 +25,7 @@ export default {
   computed: {
     currentComponent() {
       switch (this.type) {
-        case 'api':
+        case 'restapi':
           return 'APIContent';
         default:
           return null;

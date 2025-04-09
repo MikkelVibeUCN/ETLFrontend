@@ -106,8 +106,7 @@ async function loadFromPipelineConfig(config: PipelineConfig) {
   const loadConfig = config.LoadTargetConfig as LoadConfig;
 
   // Handle the extract node
-  extractConfig.SourceInfo = config.SourceInfo;
-  const sourceInfo = config.SourceInfo;
+  const sourceInfo = extractConfig.SourceInfo;
   await addNode(sourceInfo.$type, contextMenu, nodes);
 
   nextTick(() => {

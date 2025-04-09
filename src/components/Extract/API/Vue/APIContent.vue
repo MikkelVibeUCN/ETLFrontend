@@ -28,7 +28,7 @@ import { type Header } from '../Scripts/useHeaders';
 
 const emit = defineEmits(['update-payload'])
 
-const url = ref('https://api.themoviedb.org/3/movie/550?language=en-US');
+const url = ref('');
 const headers = ref<Header[]>([
 ]);
 
@@ -67,7 +67,7 @@ function getConfig() {
   return {
     Fields: selectedFields,
     SourceInfo: {
-      $type: 'api',
+      $type: 'restapi',
       Url: url.value,
       Headers: resolvedHeaders
     }

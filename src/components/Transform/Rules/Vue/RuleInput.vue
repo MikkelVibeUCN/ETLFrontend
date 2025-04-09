@@ -11,7 +11,7 @@
         v-model.number="model"
         type="number"
         class="rule-input"
-      />
+      />  
       <select
         v-else-if="inputType === 'select'"
         v-model="model"

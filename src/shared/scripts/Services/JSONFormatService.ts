@@ -1,7 +1,10 @@
-import { ServiceClient } from "./ServiceClient";
+import { createServiceClient } from "./ServiceClient";
 import { formatHeaders, simplifyJsonStructure } from "../utils/formatter";
 
 export class JSONFormatService {
+
+  static client = createServiceClient("");
+
   static async fetchJsonStructure(
     fullUrl: string,
     headers: any[]
@@ -9,7 +12,7 @@ export class JSONFormatService {
     try {
       const formattedHeaders = formatHeaders(headers);
 
-      var response = await ServiceClient.get({
+      var response = await JSONFormatService.client.get({
         headers: formattedHeaders,
         url: fullUrl
       });

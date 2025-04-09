@@ -4,12 +4,7 @@ import type { LoadConfig } from '../../components/Load/loadConfig'
 
 export interface PipelineConfig {
   Id?: string;
-  SourceInfo: {
-    $type: string;
-    Url: string;
-    Headers: Record<string, string>;
-  };
-  ExtractConfig: Omit<ExtractConfig, 'SourceInfo'>
+  ExtractConfig: ExtractConfig,
   TransformConfig: TransformConfig;
   LoadTargetConfig: LoadConfig;
 }

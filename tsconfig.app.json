@@ -10,6 +10,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "types": ["vite/client"],
+  "types": ["vite/client", "vue-router"],
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
 }

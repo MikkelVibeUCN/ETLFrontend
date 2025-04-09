@@ -1,14 +1,12 @@
-export const databaseOptions = [
-  { label: 'MySQL', value: 'mysql' }
-]
+export const databaseOptions = [{ label: "MySQL", value: "mysql" }];
 
 export interface LoadConfig {
-    TargetInfo: {
-      $type: 'mysql'| string; // e.g. "mysql", "postgres", "bigquery", etc.
-      ConnectionString: string;
-      LoadMode: "append" | "truncate" | "insert_ignore" | string;
-    };
-    Tables: TargetTable[];
+  TargetInfo: {
+    $type: "mysql" | string; // e.g. "mysql", "postgres", "bigquery", etc.
+    ConnectionString: string;
+    LoadMode: "append" | "truncate" | "insert_ignore" | string;
+  };
+  Tables: TargetTable[];
 }
 
 export interface TargetTable {

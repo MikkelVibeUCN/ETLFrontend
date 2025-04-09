@@ -52,7 +52,7 @@ export default {
   },
   computed: {
     nodeGroup() {
-      if (['api', 'file'].includes(this.type)) return 'extract'
+      if (['restapi', 'file'].includes(this.type)) return 'extract'
       if (['rules'].includes(this.type)) return 'transform'
       if (['database'].includes(this.type)) return 'load'
       return 'unknown'
@@ -62,11 +62,11 @@ export default {
         extract: {
           component: 'Extract',
           titles: {
-            api: 'Extract from API',
+            restapi: 'Extract from API',
             file: 'Extract from File'
           },
           icons: {
-            api: 'globe',
+            restapi: 'globe',
             file: 'file-alt'
           }
         },
