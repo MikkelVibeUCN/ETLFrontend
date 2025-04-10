@@ -2,7 +2,7 @@ import type { PipelineConfig } from "../PipelineConfig";
 import { createServiceClient, type RequestConfig } from "./ServiceClient";
 
 export class ConfigService {
-    private static baseUrl = "http://localhost:5015/api/";
+    private static baseUrl = "https://localhost:7027/api/";
 
     static client = createServiceClient(this.baseUrl);
 
@@ -31,8 +31,19 @@ export class ConfigService {
         const endpoint = "Pipeline"
         const options = {
             endpoint: endpoint,
-            content: config
+            content: config,
+            headers: { "Content-type": "application/json" }
         } as RequestConfig
         await ConfigService.client.post(options)
+    }
+
+    static async updateConfig(id: string, newConfig: PipelineConfig) {
+        const endpoint = `Pipeline/${id}`
+        const options = {
+            endpoint: endpoint,
+            content: newConfig,
+            headers: { "Content-type": "application/json"}
+        } as RequestConfig
+        await ConfigService.client.put(options);
     }
 }

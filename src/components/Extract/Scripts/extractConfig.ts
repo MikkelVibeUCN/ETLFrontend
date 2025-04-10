@@ -1,11 +1,11 @@
 export interface ExtractConfig {
     SourceInfo: {
-      $type: 'api' | string; // You can restrict more if needed
+      $type: 'restapi' | string; // You can restrict more if needed
       Url: string;
       Headers: Record<string, string>;
     };
     Fields: string[];
-    Filters: ExtractFilter[]; // You mentioned it but didn't use Filters; included for completeness
+    Filters: ExtractFilter[]; 
   }
   
   export interface ExtractFilter {

@@ -28,25 +28,34 @@ async function request<T = any>(baseUrl: string, config: RequestConfig, method: 
     throw new Error(`HTTP ${response.status}: ${error}`);
   }
 
-  const data = await response.json();
+  const contentType = response.headers.get("content-type");
 
-  if ("success" in data && data.success === false) {
-    throw new Error(`API failure: ${method} ${finalUrl}`);
+  if (contentType?.includes("application/json")) {
+    const data = await response.json();
+    if ("success" in data && data.success === false) {
+      throw new Error(`API failure: ${method} ${finalUrl}`);
+    }
+    return data;
   }
 
-  return data;
+  // fallback to text if it's not JSON
+  const textData = await response.text();
+  return textData as unknown as T;
 }
 
-// Factory function to create a ServiceClient with a base_url
+
 export function createServiceClient(baseUrl: string) {
   return {
     get: <T = any>(config: Omit<RequestConfig, "method">) =>
-      request<T>(baseUrl, { ...config}, "GET"),
+      request<T>(baseUrl, { ...config }, "GET"),
 
     post: <T = any>(config: Omit<RequestConfig, "method">) =>
-      request<T>(baseUrl, { ...config}, "POST"),
+      request<T>(baseUrl, { ...config }, "POST"),
 
     delete: <T = any>(config: Omit<RequestConfig, "method">) =>
-      request<T>(baseUrl, { ...config}, "DELETE"),
+      request<T>(baseUrl, { ...config }, "DELETE"),
+
+    put: <T = any>(config: Omit<RequestConfig, "method">) =>
+      request<T>(baseUrl, { ...config }, "PUT"),
   };
 }

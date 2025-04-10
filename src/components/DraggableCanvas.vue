@@ -86,13 +86,15 @@ function handleSetNodeRef(el: HTMLElement | ComponentPublicInstance | null, inde
 
 
 
-const exportPipeline = () => {
+const exportPipeline = (): PipelineConfig | null => {
   try {
-    const configBuilder = new CreateConfig(nodes.value, nodeComponents.value)
-    const config = configBuilder.build() // no ID passed
-    console.log('Pipeline config:', JSON.stringify(config, null, 2))
+    const configBuilder = new CreateConfig(nodes.value, nodeComponents.value);
+    const config = configBuilder.build(); 
+
+    return config as PipelineConfig;
   } catch (err) {
-    console.error('Failed to build config:', err)
+    console.error('Failed to build config:', err);
+    return null; 
   }
 }
 import { type ExtractConfig } from './Extract/Scripts/extractConfig'

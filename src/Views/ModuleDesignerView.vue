@@ -3,10 +3,10 @@
     <div class="navbar">
       <h1 class="title">{{ title }}</h1>
       <div class="navbar-items">
-        <div
-          class="navbar-item"
-          v-for="(navItem, i) in navbarItems"
-          :key="i"
+        <div 
+          v-for="(navItem, i) in navbarItems" 
+          :key="i" 
+          class="navbar-item" 
           @click="navItem.clickEvent"
         >
           <img class="icon" :src="navItem.iconPath" />
@@ -16,32 +16,57 @@
     </div>
 
     <DraggableCanvas ref="canvasRef" :config="config" />
+
+    <Popup 
+      :isVisible="showIdModal" 
+      title="Set Config ID" 
+      placeholder="Enter the ID for the config"
+      inputType="text" 
+      initialValue="" 
+      @set-value="setId" 
+      @close="closeIdModal" 
+    />
+
+    <Popup 
+      :isVisible="showUpdateModal" 
+      title="Update config?" 
+      @set-value="handleConfigSave" 
+      @close="closeUpdateModal" 
+    />
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { useRoute } from 'vue-router'
 import DraggableCanvas from '../components/DraggableCanvas.vue'
 import Extract from '../components/Extract/Extract.vue'
 import Transform from '../components/Transform/Transform.vue'
-import type { PipelineConfig } from '../shared/scripts/PipelineConfig'
+import { createBlankConfig, type PipelineConfig } from '../shared/scripts/PipelineConfig'
 import { ConfigService } from '../shared/scripts/Services/ConfigService'
+import Popup from '../components/shared/Popup.vue'
 
 export default defineComponent({
   name: 'ModuleDesignerView',
+  
   components: {
     DraggableCanvas,
     Extract,
-    Transform
+    Transform,
+    Popup
   },
+  
   data() {
     return {
-      title: "ETL-Module Designer",
+      title: "Module Designer",
       navbarItems: [] as { iconPath: string; name: string; clickEvent: () => void }[],
-      config: null as PipelineConfig | null
+      config: null as PipelineConfig | null,
+      isLoadingConfig: false,
+      showIdModal: false,
+      showUpdateModal: false,
+      pendingConfig: null as PipelineConfig | null // Stores config waiting for user action
     }
   },
+  
   created() {
     this.navbarItems = [
       { iconPath: "/save.png", name: "Save", clickEvent: this.save },
@@ -50,52 +75,166 @@ export default defineComponent({
       { iconPath: "/help.png", name: "Help", clickEvent: this.showHelp }
     ]
   },
+  
   async mounted() {
-    await this.loadConfigToCanvas()
+    await this.loadInitialConfig()
   },
-  watch: {
-    config: {
-      deep: true,
-      handler() {
-        this.loadConfigToCanvas()
-      }
-    }
-  },
+  
   methods: {
-    async loadConfigToCanvas() {
-      const route = useRoute()
-      const id = route.params.id as string
-      this.config = await ConfigService.getConfig(id)
+    async loadInitialConfig() {
+      if (this.isLoadingConfig) return;
+      this.isLoadingConfig = true;
 
-      const canvas = this.$refs.canvasRef as any
-      if (canvas?.loadFromPipelineConfig) {
-        canvas.loadFromPipelineConfig(this.config)
-      } else {
-        console.warn("DraggableCanvas ref not found or loadFromPipelineConfig not available")
+      try {
+        const id = this.$route.params.id as string
+
+        if (id !== "new") {
+          try {
+            this.config = await ConfigService.getConfig(id)
+            
+            const canvas = this.$refs.canvasRef as any
+            if (canvas?.loadFromPipelineConfig && this.config) {
+              canvas.loadFromPipelineConfig(this.config)
+            }
+          } catch (error) {
+            console.error("Failed to load config:", error)
+            this.config = createBlankConfig()
+          }
+        } else {
+          this.config = createBlankConfig()
+        }
+      } finally {
+        this.isLoadingConfig = false;
       }
     },
+    
     async save() {
-      if(this.config) {
-        console.log("Saving to database", this.config)
-
-        try {
-          await ConfigService.saveConfig(this.config);
-          console.log("Saved config")
+      // Get the latest config from the canvas
+      const canvas = this.$refs.canvasRef as any;
+      if (!canvas) {
+        console.error("Canvas reference not found");
+        return;
+      }
+      
+      const newConfig = canvas.exportPipeline();
+      if (!newConfig) {
+        console.error("Failed to export pipeline configuration");
+        return;
+      }
+      
+      // Preserve ID if we already have one
+      if (this.config?.Id) {
+        newConfig.Id = this.config.Id;
+      }
+      
+      // Store as pending config
+      this.pendingConfig = newConfig as PipelineConfig;
+      
+      // If no ID is set, prompt user to set one
+      if (!this.pendingConfig.Id) {
+        this.showIdModal = true;
+        return;
+      }
+      
+      // Check if config exists before proceeding
+      await this.checkExistingAndSave();
+    },
+    
+    async checkExistingAndSave() {
+      if (!this.pendingConfig?.Id) return;
+      
+      try {
+        const existingConfig = await ConfigService.getConfig(this.pendingConfig.Id);
+        
+        if (existingConfig) {
+          // Config exists - prompt for update confirmation
+          this.showUpdateModal = true;
+        } else {
+          // This should never happen since getConfig should throw if not found
+          await this.handleConfigSave();
         }
-        catch(e) {
-          console.log("Failed to save to  database error: " + e)
-        }
-
+      } catch (error) {
+        // If getConfig throws an error, it likely means the config doesn't exist
+        // Proceed with creation
+        await this.handleConfigSave();
       }
     },
+    
+    async handleConfigSave() {
+      if (!this.pendingConfig?.Id) {
+        console.error("Cannot save: pendingConfig or ID is missing");
+        return;
+      }
+      
+      try {
+        const id = this.pendingConfig.Id;
+        
+        try {
+          // Check if config exists
+          await ConfigService.getConfig(id);
+          
+          // Config exists, update it
+          await ConfigService.updateConfig(id, this.pendingConfig);
+          console.log("Successfully updated config:", id);
+        } catch {
+          // Config doesn't exist, create it
+          await ConfigService.saveConfig(this.pendingConfig);
+          console.log("Successfully created config:", id);
+        }
+        
+        // Update the main config reference
+        this.config = this.pendingConfig;
+        
+        // Close modals
+        this.closeIdModal();
+        this.closeUpdateModal();
+      } catch (error) {
+        console.error("Failed to save config:", error);
+      }
+    },
+    
+    setId(id: string) {
+      if (!this.pendingConfig) {
+        console.error("Cannot set ID: pendingConfig is null");
+        return;
+      }
+      
+      this.pendingConfig.Id = id;
+      this.closeIdModal();
+      
+      // Continue with save process
+      this.checkExistingAndSave();
+    },
+    
     discard() {
       console.log("Discard clicked")
+      // Implement discard functionality
     },
+    
     showTemplates() {
       console.log("Show templates")
+      // Implement templates functionality
     },
+    
     showHelp() {
       console.log("Show help")
+      // Implement help functionality
+    },
+    
+    closeIdModal() {
+      this.showIdModal = false;
+      if (!this.pendingConfig?.Id) {
+        // Clear pending config if no ID was set
+        this.pendingConfig = null;
+      }
+    },
+    
+    closeUpdateModal() {
+      this.showUpdateModal = false;
+      // Clear pending config if user cancels update
+      if (this.showUpdateModal) {
+        this.pendingConfig = null;
+      }
     }
   }
 })

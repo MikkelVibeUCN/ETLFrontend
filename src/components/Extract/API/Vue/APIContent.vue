@@ -74,14 +74,10 @@ function getConfig() {
   }
 }
 
-
-
-// Optional safety check
 if (!nodes || !edges) {
   throw new Error('nodes and edges must be provided by parent')
 }
 
-// Format logic
 const {
   jsonFormat,
   fieldTree,
@@ -103,7 +99,6 @@ const toggleFieldEditing = () => {
 function setConfig(config: ExtractConfig) {
   if (!config) return;
 
-  // 1. Set URL and Headers
   url.value = config.SourceInfo?.Url || '';
 
   const rawHeaders = config.SourceInfo?.Headers || {};

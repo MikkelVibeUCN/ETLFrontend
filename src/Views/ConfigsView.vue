@@ -17,7 +17,7 @@
 import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { ConfigService } from '../shared/scripts/Services/ConfigService'
-import type { PipelineConfig } from '../shared/scripts/PipelineConfig'
+import { type PipelineConfig, createBlankConfig } from '../shared/scripts/PipelineConfig'
 const configs = ref<PipelineConfig[]>([])
 
 const router = useRouter()
@@ -33,30 +33,8 @@ onMounted(async () => {
 })
 
 function createNewConfig() {
-    const newConfig: PipelineConfig = {
-        Id: Date.now().toString(),
-        ExtractConfig: {
-            SourceInfo: {
-                $type: "",
-                Headers: {},
-                Url: ""
-            },
-            Fields: [],
-            Filters: []
-        },
-        TransformConfig: {
-            Filters: [],
-            Mappings: []
-        },
-        LoadTargetConfig: {
-            Tables: [],
-            TargetInfo: {
-                $type: "",
-                ConnectionString: "",
-                LoadMode: ""
-            }
-        }
-    }
+    var newConfig = createBlankConfig()
+    newConfig.Id = "new"
     configs.value.push(newConfig)
 }
 </script>
