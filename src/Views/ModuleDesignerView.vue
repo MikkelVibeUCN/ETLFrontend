@@ -51,7 +51,7 @@ export default defineComponent({
   components: {
     DraggableCanvas,
     Extract,
-    Transform,
+    Transform,  
     Popup
   },
   

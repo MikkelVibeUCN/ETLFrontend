@@ -291,7 +291,7 @@ function setConfig(config: TransformConfig) {
   }
 
   applyRules(props.nodes)
-  emit('update', props.nodes)
+  emit('update', [...props.nodes]) // emits a new reference
 }
 
 

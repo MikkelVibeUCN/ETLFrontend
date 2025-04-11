@@ -145,6 +145,7 @@ function setConfig(config: ExtractConfig) {
         });
 
         // Optionally emit updated tree to parent
+        
         emit('update-payload', { fieldTree: toRaw(fieldTree.value) });
 
         stopWatch(); // Only once
@@ -155,19 +156,17 @@ function setConfig(config: ExtractConfig) {
 }
 
 
-const getFormat = () => {
-  triggerFormatLoading(url.value, headers.value)
-
-  watch(
-    () => fieldTree.value,
-    (newTree) => {
-      if (newTree) {
-        emit('update-payload', { fieldTree: toRaw(newTree) })
-      }
-    },
-    { immediate: true, deep: true }
-  )
-}
+watch(
+  () => fieldTree.value,
+  (newTree) => {
+    if (newTree) {
+      // Emit updated fieldTree whenever it changes
+      console.log('[APIContent] fieldTree updated:', toRaw(newTree));
+      emit('update-payload', { fieldTree: toRaw(newTree) });
+    }
+  },
+  { immediate: true, deep: true }
+);
 
 
 const onContentLeft = () => loadFormatAfterTransition(url.value, headers.value);
