@@ -100,7 +100,6 @@ function setConfig(config: ExtractConfig) {
   if (!config) return;
 
   url.value = config.SourceInfo?.Url || '';
-
   const rawHeaders = config.SourceInfo?.Headers || {};
   headers.value = Object.entries(rawHeaders).map(([key, value]) => {
     if (key === 'Authorization') {
@@ -117,43 +116,57 @@ function setConfig(config: ExtractConfig) {
 
   const selectedFields = config.Fields || [];
 
-  // 2. Trigger getFormat (async loads the fieldTree)
+  // Trigger getFormat (loads the fieldTree asynchronously)
   triggerFormatLoading(url.value, headers.value);
 
-  // 3. Watch for fieldTree to be loaded, then apply selected fields
+  // Watch for fieldTree to load, then apply selected fields
   const stopWatch = watch(
     () => fieldTree.value,
     (tree) => {
       if (tree && tree.length > 0 && selectedFields.length > 0) {
+        // Apply selected fields
         fieldTree.value = tree.map(field => {
-          // If the field is an object, uncheck its children
           const isObject = field.children && field.children.length > 0;
           const updatedField = {
             ...field,
             selected: selectedFields.includes(field.name)
           };
 
-          // If the field is an object, uncheck all of its children
+          // If it's an object, uncheck all children
           if (isObject && field.children) {
             updatedField.children = field.children.map(child => ({
               ...child,
-              selected: false  // Uncheck all children
+              selected: false // Uncheck all children
             }));
           }
 
           return updatedField;
         });
 
-        // Optionally emit updated tree to parent
-        
+        // Emit updated fieldTree to parent
         emit('update-payload', { fieldTree: toRaw(fieldTree.value) });
 
-        stopWatch(); // Only once
+        stopWatch(); // Stop watching after the first successful update
       }
     },
     { immediate: true, deep: true }
   );
 }
+const getFormat = () => {
+  triggerFormatLoading(url.value, headers.value);
+
+  // Watch for any changes in fieldTree and emit immediately
+  watch(
+    () => fieldTree.value,
+    (newTree) => {
+      if (newTree) {
+        console.log('[APIContent] Emitting fieldTree update:', toRaw(newTree));
+        emit('update-payload', { fieldTree: toRaw(newTree) });
+      }
+    },
+    { immediate: true, deep: true }
+  );
+};
 
 
 watch(
@@ -167,6 +180,7 @@ watch(
   },
   { immediate: true, deep: true }
 );
+
 
 
 const onContentLeft = () => loadFormatAfterTransition(url.value, headers.value);

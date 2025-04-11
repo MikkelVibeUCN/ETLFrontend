@@ -1,16 +1,16 @@
 <template>
-    <div class="configs-view">
-        <div class="header">
-            <h2>Configs</h2>
-            <button @click="createNewConfig">New Config</button>
-        </div>
-        <ul>
-            <li v-for="config in configs" :key="config.Id" class="config-item">
-                <span>{{ config.Id }}</span>
-                <button @click="editConfig(config.Id)">Edit</button>
-            </li>
-        </ul>
+  <div class="configs-view">
+    <div class="header">
+      <h2>Configs</h2>
+      <button @click="createNewConfig">New Config</button>
     </div>
+    <ul>
+      <li v-for="config in configs" :key="config.Id" class="config-item">
+        <span>{{ config.Id }}</span>
+        <button @click="editConfig(config.Id)">Edit</button>
+      </li>
+    </ul>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -26,7 +26,6 @@ function editConfig(configId: string | undefined) {
     if(configId !== undefined)
         router.push(`/pipeline/edit/${configId}`)
 }
-
 
 onMounted(async () => {
     configs.value = await ConfigService.getAllConfigs()
@@ -44,8 +43,9 @@ function createNewConfig() {
   background-color: #1e1e1e;
   padding: 1.5rem 2rem;
   color: white;
-  height: 100%;
+  height: 100%; /* Make sure the content is 100% of its container */
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: auto; /* Allow scrolling */
 }
 
 .header {
