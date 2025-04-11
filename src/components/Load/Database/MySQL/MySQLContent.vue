@@ -93,6 +93,7 @@
 import { ref, computed, watch, watchEffect } from 'vue'
 import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder'
 import { type LoadConfig } from '../../loadConfig';
+import { ConfigService } from '../../../../shared/scripts/Services/ConfigService';
 
 const props = defineProps<{ fieldTree: FieldNode[] }>()
 
@@ -130,18 +131,18 @@ function getConfig() {
   const connectionString = `Server=${host.value};Port=${port.value};User Id=${user.value};Password=${password.value};Database=${database.value};`
 
   return {
-    LoadTargetConfig: {
-      TargetInfo: {
-        $type: 'mysql',
-        ConnectionString: connectionString,
-        LoadMode: loadMode.value
-      },
-      Tables: mappedTables.value.map(table => ({
-        TargetTable: table.name,
-        Fields: table.fields.map(f => f.path)
-      }))
-    }
-  }
+    TargetInfo: {
+      $type: 'mysql',
+      ConnectionString: connectionString,
+      LoadMode: loadMode.value
+    },
+    Tables: mappedTables.value.map(table => ({
+      TargetTable: table.name,
+      Fields: table.fields.map(f => f.path)
+    }))
+
+  } as LoadConfig
+
 }
 
 function setConfig(config: LoadConfig) {
@@ -177,15 +178,15 @@ function setConfig(config: LoadConfig) {
             return found
               ? { ...found, path }
               : {
-                  name: path.split('.').pop() || path,
-                  path,
-                  selected: false,
-                  dataType: 'unknown',
-                  rules: [],
-                  ruleValues: {},
-                  children: [],
-                  _expanded: false
-                };
+                name: path.split('.').pop() || path,
+                path,
+                selected: false,
+                dataType: 'unknown',
+                rules: [],
+                ruleValues: {},
+                children: [],
+                _expanded: false
+              };
           })
         }));
 
@@ -205,9 +206,14 @@ watch(
   { immediate: true }
 )
 
-function testConnection() {
-  connected.value = true
-  tables.value = ['users', 'orders', 'products']
+async function testConnection() {
+  const config = getConfig()
+
+  connected.value = await ConfigService.validateLoadConfig(config)
+
+  if(connected.value) {
+    tables.value = await ConfigService.loadMetadata(config)
+  }
 }
 
 function getDisplayName(field: FieldNode | undefined): string {

@@ -1,3 +1,4 @@
+import type { LoadConfig } from "../../../components/Load/loadConfig";
 import type { PipelineConfig } from "../PipelineConfig";
 import { createServiceClient, type RequestConfig } from "./ServiceClient";
 
@@ -45,5 +46,33 @@ export class ConfigService {
             headers: { "Content-type": "application/json"}
         } as RequestConfig
         await ConfigService.client.put(options);
+    }
+
+    static async validateLoadConfig(config: LoadConfig): Promise<boolean> {
+        const endpoint = "Pipeline/validate"
+        const options = {
+            endpoint: endpoint,
+            headers: { "Content-type": "application/json"},
+            content: this.mapConfigToContent(config)
+        } as RequestConfig
+        var result = await ConfigService.client.get(options);
+        return result.isValid
+    }
+
+    static async loadMetadata(config: LoadConfig): Promise<string[]> {
+        const endpoint = "Pipeline/metadata"
+        const options = {
+            endpoint: endpoint,
+            headers: { "Content-type": "application/json"},
+            content: this.mapConfigToContent(config)
+        } as RequestConfig
+        return await ConfigService.client.get(options)
+    }
+
+    private static mapConfigToContent(config: LoadConfig) {
+        return {
+            connectionString: config.TargetInfo.ConnectionString,
+            type: config.TargetInfo.$type
+        }
     }
 }
