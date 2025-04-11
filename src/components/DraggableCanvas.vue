@@ -19,13 +19,17 @@
 
       <!-- ETL nodes -->
       <div v-for="(node, index) in nodes" :key="node.id" class="draggable" :data-id="node.id"
-        :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
-        <ETLNodeWrapper :ref="(el: HTMLElement | ComponentPublicInstance | null) => handleSetNodeRef(el, index)"
-          :type="node.type" :component-props="node"
-          @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
-          @dragstart="startNodeDrag(index, $event)" @start-connection="handleStartConnection"
-          @finish-connection="handleFinishConnection" @update-node-payload="handleNodePayload" />
-      </div>
+  :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
+  <ETLNodeWrapper 
+    :ref="(el: any) => handleSetNodeRef(el, index)"
+    :type="node.type" 
+    :component-props="node"
+    @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
+    @dragstart="startNodeDrag(index, $event)" 
+    @start-connection="handleStartConnection"
+    @finish-connection="handleFinishConnection" 
+    @update-node-payload="handleNodePayload" />
+</div>
     </div>
 
     <ContextMenu v-if="contextMenu.visible" :x="contextMenu.x" :y="contextMenu.y" @add-node="handleAddNode" />
@@ -75,11 +79,20 @@ const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])
 
 // Update handleSetNodeRef to accept the el parameter
 function handleSetNodeRef(el: HTMLElement | ComponentPublicInstance | null, index: number) {
-  nodeRefs.value[index] = el instanceof HTMLElement ? el : null;
+  // Store the Vue component instance
+  if (el) {
+    if (el instanceof HTMLElement) {
+      nodeRefs.value[index] = el;
+    } else {
+      // If it's a component instance, we need to access its $el property
+      const compEl = (el as any).$el;
+      nodeRefs.value[index] = compEl instanceof HTMLElement ? compEl : null;
+    }
 
-  if (el && typeof el === 'object' && '$refs' in el) {
-    nodeComponents.value[index] = el as InstanceType<typeof ETLNodeWrapper>;
+    // Store the component instance separately
+    nodeComponents.value[index] = el as any;
   } else {
+    nodeRefs.value[index] = null;
     nodeComponents.value[index] = null;
   }
 }
@@ -89,12 +102,12 @@ function handleSetNodeRef(el: HTMLElement | ComponentPublicInstance | null, inde
 const exportPipeline = (): PipelineConfig | null => {
   try {
     const configBuilder = new CreateConfig(nodes.value, nodeComponents.value);
-    const config = configBuilder.build(); 
+    const config = configBuilder.build();
 
     return config as PipelineConfig;
   } catch (err) {
     console.error('Failed to build config:', err);
-    return null; 
+    return null;
   }
 }
 import { type ExtractConfig } from './Extract/Scripts/extractConfig'
@@ -107,55 +120,66 @@ async function loadFromPipelineConfig(config: PipelineConfig) {
   const transformConfig = config.TransformConfig as TransformConfig;
   const loadConfig = config.LoadTargetConfig as LoadConfig;
 
-  // Handle the extract node
+  // Initialize position if needed
+  if (!contextMenu.worldX || !contextMenu.worldY) {
+    contextMenu.worldX = 100;
+    contextMenu.worldY = 100;
+  }
+
+  // Helper function to add a node and get its reference
+  async function addConfiguredNode(nodeType: string, nodeConfig: any) {
+    await addNode(nodeType, contextMenu, nodes, nodeRefs);
+    await nextTick();
+    
+    const nodeIndex = nodes.value.length - 1;
+    const node = nodes.value[nodeIndex];
+    const nodeComponent = nodeComponents.value[nodeIndex];
+    
+    if (nodeComponent) {
+      nodeComponent.setConfig(nodeConfig);
+    }
+    
+    return {
+      node,
+      element: nodeRefs.value[nodeIndex],
+      index: nodeIndex
+    };
+  }
+  
+  // Helper function to position the next node
+  function positionNextNode(fromNode: any, spacing = 100) {
+    const nodeWidth = fromNode.element?.offsetWidth || 200;
+    contextMenu.worldX = fromNode.node.x + nodeWidth + spacing;
+    contextMenu.worldY = fromNode.node.y;
+  }
+  
+  // Helper function to connect nodes
+  function connectNodes(fromNode: any, toNode: any) {
+    handleStartConnection(fromNode.node.id);
+    handleFinishConnection(toNode.node.id);
+  }
+
+  // Add extract node
   const sourceInfo = extractConfig.SourceInfo;
-  await addNode(sourceInfo.$type, contextMenu, nodes);
-
-  nextTick(() => {
-    const nodeComponent = nodeComponents.value[nodes.value.length - 1];
-    if (nodeComponent) {
-      nodeComponent.setConfig(extractConfig);
-    }
-  });
-
-  await addNode('rules', contextMenu, nodes); 
-
-  nextTick(() => {
-    const nodeComponent = nodeComponents.value[nodes.value.length - 1];
-    if (nodeComponent) {
-      nodeComponent.setConfig(transformConfig);
-    }
-  });
-
-  const extractNode = nodes.value.find((node) => node.group === 'extract');
-  const transformNode = nodes.value.find((node) => node.group === 'transform');
-
-  if (extractNode && transformNode) {
-    handleStartConnection(extractNode.id);
-    handleFinishConnection(transformNode.id);
-  }
-
-
-  await addNode('database', contextMenu, nodes);
-
-  nextTick(() => {
-    const nodeComponent = nodeComponents.value[nodes.value.length - 1];
-    if (nodeComponent) {
-      nodeComponent.setConfig(loadConfig);
-    }
-  });
-
-  const loadNode = nodes.value.find((node) => node.group === 'load');
-
-  if (transformNode && loadNode) {
-    handleStartConnection(transformNode.id);
-    handleFinishConnection(loadNode.id);
-  }
+  const extractNodeRef = await addConfiguredNode(sourceInfo.$type, extractConfig);
+  
+  // Add transform node
+  positionNextNode(extractNodeRef);
+  const transformNodeRef = await addConfiguredNode('rules', transformConfig);
+  
+  // Connect extract to transform
+  connectNodes(extractNodeRef, transformNodeRef);
+  
+  // Add load node
+  positionNextNode(transformNodeRef);
+  const loadNodeRef = await addConfiguredNode('database', loadConfig);
+  
+  // Connect transform to load
+  connectNodes(transformNodeRef, loadNodeRef);
+  
   contextMenu.visible = false;
   updateContainerBounds();
 }
-
-
 defineExpose({
   exportPipeline,
   loadFromPipelineConfig
