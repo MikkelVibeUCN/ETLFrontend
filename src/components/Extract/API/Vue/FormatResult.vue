@@ -1,32 +1,38 @@
 <template>
-    <transition name="fade-up" @after-leave="onLeave">
-      <div v-if="visible && !loading" :key="renderedKey" class="content">
+  <transition name="fade-up" @after-leave="onLeave">
+    <div v-if="visible && !loading" :key="renderedKey" class="content">
+
+      <p v-if="error" class="error-message">{{ error }}</p>
+      <div v-else>
         <div class="labels-row">
           <label class="section-label">JSON Format</label>
           <label class="section-label">Include Fields</label>
         </div>
-  
+
+
         <div class="content-row">
           <div class="section">
             <textarea v-model="jsonFormatModel" rows="10" />
 
           </div>
-  
+
           <div class="section">
             <button @click="toggleEditing">
               {{ editing ? 'Hide' : 'Edit' }}
             </button>
-  
+
             <div v-if="editing" style="margin-top: 1rem;">
               <TreeCheckbox :nodes="fieldTree" />
             </div>
           </div>
         </div>
       </div>
-    </transition>
-  </template>
-  
-  <script setup lang="ts">
+
+    </div>
+  </transition>
+</template>
+
+<script setup lang="ts">
 import { computed } from 'vue';
 import TreeCheckbox from './TreeCheckbox.vue';
 
@@ -39,6 +45,7 @@ const props = defineProps<{
   renderedKey: number;
   onLeave: () => void;
   toggleEditing: () => void;
+  error?: string | null
 }>();
 
 const emit = defineEmits(['update:jsonFormat']);
@@ -50,7 +57,7 @@ const jsonFormatModel = computed({
 });
 </script>
 
-  
+
 <style scoped>
 .content {
   display: flex;
@@ -111,5 +118,15 @@ textarea {
 .fade-up-leave-to {
   opacity: 0;
   transform: translateY(10px);
+}
+
+.error-message {
+  color: #ff4d4f;
+  background-color: #2b1b1b;
+  padding: 0.75rem;
+  border: 1px solid #ff4d4f;
+  border-radius: 6px;
+  font-weight: bold;
+  margin-bottom: 1rem;
 }
 </style>

@@ -10,7 +10,7 @@
 
     <FormatResult :visible="showContentSection" :loading="loadingFormat" :renderedKey="renderedContentKey"
       :jsonFormat="jsonFormat" :fieldTree="fieldTree" :editing="editingFields" :onLeave="onContentLeft"
-      :toggleEditing="toggleFieldEditing" />
+      :toggleEditing="toggleFieldEditing" :error="formatError" />
 
     <LoadingSpinner v-if="hasRenderedOnce && loadingFormat && !isTransitioningOut" />
   </div>
@@ -24,6 +24,9 @@ import FormatResult from '../Vue/FormatResult.vue';
 import LoadingSpinner from '../Vue/LoadingSpinner.vue';
 import { useFormatLoader } from '../Scripts/ExtractSelector';
 import { type Header } from '../Scripts/useHeaders';
+
+
+const formatError = ref<string | null>(null);
 
 
 const emit = defineEmits(['update-payload'])
@@ -152,15 +155,20 @@ function setConfig(config: ExtractConfig) {
     { immediate: true, deep: true }
   );
 }
-const getFormat = () => {
-  triggerFormatLoading(url.value, headers.value);
+const getFormat = async () => {
+  formatError.value = null; // clear previous error
 
-  // Watch for any changes in fieldTree and emit immediately
+  try {
+    await triggerFormatLoading(url.value, headers.value);
+  } catch (err: any) {
+    formatError.value = err?.message || 'Unknown error occurred while loading format.';
+  }
+
+  // Emit updated fieldTree when loaded
   watch(
     () => fieldTree.value,
     (newTree) => {
       if (newTree) {
-        console.log('[APIContent] Emitting fieldTree update:', toRaw(newTree));
         emit('update-payload', { fieldTree: toRaw(newTree) });
       }
     },
@@ -183,7 +191,14 @@ watch(
 
 
 
-const onContentLeft = () => loadFormatAfterTransition(url.value, headers.value);
+const onContentLeft = () => {
+  try {
+    loadFormatAfterTransition(url.value, headers.value);
+  }
+  catch (err: any) {
+    formatError.value = err?.message
+  }
+}
 </script>
 
 <style scoped>

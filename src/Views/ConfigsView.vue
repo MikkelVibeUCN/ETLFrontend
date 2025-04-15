@@ -7,8 +7,12 @@
     <ul>
       <li v-for="config in configs" :key="config.Id" class="config-item">
         <span>{{ config.Id }}</span>
-        <button @click="editConfig(config.Id)">Edit</button>
+        <div class="button-group">
+          <button class="edit-btn" @click="editConfig(config.Id)">Edit</button>
+          <button class="run-btn" @click="runConfig(config.Id)">Run</button>
+        </div>
       </li>
+
     </ul>
   </div>
 </template>
@@ -18,24 +22,30 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted } from 'vue'
 import { ConfigService } from '../shared/scripts/Services/ConfigService'
 import { type PipelineConfig, createBlankConfig } from '../shared/scripts/PipelineConfig'
+import { ExtractService } from '../shared/scripts/Services/ExtractService'
 const configs = ref<PipelineConfig[]>([])
 
 const router = useRouter()
 
 function editConfig(configId: string | undefined) {
-    if(configId !== undefined)
-        router.push(`/pipeline/edit/${configId}`)
+  if (configId !== undefined)
+    router.push(`/pipeline/edit/${configId}`)
 }
 
 onMounted(async () => {
-    configs.value = await ConfigService.getAllConfigs()
+  configs.value = await ConfigService.getAllConfigs()
 })
 
 function createNewConfig() {
-    var newConfig = createBlankConfig()
-    newConfig.Id = "new"
-    configs.value.push(newConfig)
+  var newConfig = createBlankConfig()
+  newConfig.Id = "new"
+  configs.value.push(newConfig)
 }
+
+async function runConfig(configId: string) {
+  await ExtractService.startPipeline(configId);
+}
+
 </script>
 
 <style scoped>
@@ -43,9 +53,11 @@ function createNewConfig() {
   background-color: #1e1e1e;
   padding: 1.5rem 2rem;
   color: white;
-  height: 100%; /* Make sure the content is 100% of its container */
+  height: 100%;
+  /* Make sure the content is 100% of its container */
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  overflow-y: auto; /* Allow scrolling */
+  overflow-y: auto;
+  /* Allow scrolling */
 }
 
 .header {
@@ -90,8 +102,26 @@ button {
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
-
-button:hover {
-  background-color: #0056b3;
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
 }
+
+.edit-btn {
+  background-color: #ff9800; /* orange */
+}
+
+.edit-btn:hover {
+  background-color: #e68900;
+}
+
+.run-btn {
+  background-color: #4caf50; /* green */
+}
+
+.run-btn:hover {
+  background-color: #3d8b40;
+}
+
 </style>

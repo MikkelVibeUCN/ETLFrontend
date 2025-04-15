@@ -53,9 +53,8 @@ export class CreateConfig {
             Filters: config.Filters || []
           }
           break
-
         case 'load':
-          loadTargetConfig = config.LoadTargetConfig
+          loadTargetConfig = config
           break
       }
     }

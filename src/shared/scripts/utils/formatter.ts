@@ -1,4 +1,6 @@
 export function simplifyJsonStructure(json: any): any {
+  //if(!isValidJson(json)) throw Error("invalid json")
+
   if (Array.isArray(json)) {
     if (json.length === 0) return [];
     return [simplifyJsonStructure(json[0])];
@@ -38,6 +40,16 @@ type HeaderItem = {
   value: string;
   extra?: string;
 };
+
+function isValidJson(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value)
+    return typeof parsed === 'object' && parsed !== null
+  } catch (e) {
+    return false
+  }
+}
+
 
 export function formatHeaders(headers: HeaderItem[]): Record<string, string> {
   const newHeaders: Record<string, string> = {};

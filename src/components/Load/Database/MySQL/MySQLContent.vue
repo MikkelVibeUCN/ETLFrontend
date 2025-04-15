@@ -55,7 +55,22 @@
       </div>
 
       <label>Assign Fields to Table</label>
-      <div class="field-selector">
+
+      <!-- 👇 Use dropdowns for mapping fields to columns -->
+      <div v-if="!isCreatingNew && selectedTable" class="field-selector">
+        <div v-for="column in selectedTableColumns" :key="column" class="checkbox-row">
+          <label>{{ column }}</label>
+          <select v-model="existingTableFieldMap[column]" class="input">
+            <option disabled value="">-- Select Field --</option>
+            <option v-for="field in allFields" :key="field.path" :value="field.path">
+              {{ getDisplayName(field) }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ✅ Existing checkbox logic for new tables -->
+      <div v-else class="field-selector">
         <div v-for="field in unmappedFields" :key="field.path" class="checkbox-row">
           <label>
             <input type="checkbox" v-model="field.selected" />
@@ -63,6 +78,7 @@
           </label>
         </div>
       </div>
+
 
       <label>Load Mode</label>
       <select v-model="loadMode" class="input">
@@ -94,6 +110,7 @@ import { ref, computed, watch, watchEffect } from 'vue'
 import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder'
 import { type LoadConfig } from '../../loadConfig';
 import { ConfigService } from '../../../../shared/scripts/Services/ConfigService';
+import type { database } from '../../../../shared/types/databaseFormat';
 
 const props = defineProps<{ fieldTree: FieldNode[] }>()
 
@@ -117,6 +134,8 @@ const isCreatingNew = ref(false)
 
 const fieldNodes = ref<FieldNode[]>([])
 
+const fullMetadata = ref<database | null>(null)
+
 
 defineExpose({
   getConfig,
@@ -125,7 +144,7 @@ defineExpose({
 
 function getConfig() {
   if (!mappedTables.value.length) {
-    throw new Error('No mapped tables found.')
+    //throw new Error('No mapped tables found.')
   }
 
   const connectionString = `Server=${host.value};Port=${port.value};User Id=${user.value};Password=${password.value};Database=${database.value};`
@@ -208,13 +227,15 @@ watch(
 
 async function testConnection() {
   const config = getConfig()
-
   connected.value = await ConfigService.validateLoadConfig(config)
 
-  if(connected.value) {
-    tables.value = await ConfigService.loadMetadata(config)
+  if (connected.value) {
+    const metadataDb = await ConfigService.loadMetadata(config) as database
+    fullMetadata.value = metadataDb
+    tables.value = metadataDb.tables.map(t => t.tableName)
   }
 }
+
 
 function getDisplayName(field: FieldNode | undefined): string {
   if (!field) return '(missing)'
@@ -266,30 +287,56 @@ function confirmMapping() {
   const tableName = isCreatingNew.value ? newTableName.value : selectedTable.value
   if (!tableName) return
 
-  const selectedFields = unmappedFields.value.filter((f) => f.selected)
-  if (!selectedFields.length) return
+  let fields: MappedFieldNode[] = []
+
+  if (isCreatingNew.value) {
+    fields = unmappedFields.value.filter((f) => f.selected)
+  } else {
+    fields = Object.entries(existingTableFieldMap.value)
+      .filter(([_, fieldPath]) => fieldPath)
+      .map(([_, fieldPath]) => {
+        const found = findFieldByPath(fieldPath)
+        return found
+          ? { ...found, path: fieldPath }
+          : {
+              name: fieldPath.split('.').pop() || fieldPath,
+              path: fieldPath,
+              selected: false,
+              dataType: 'unknown',
+              rules: [],
+              ruleValues: {},
+              children: [],
+              _expanded: false
+            }
+      })
+  }
+
+  if (!fields.length) return
 
   const alreadyMapped = mappedTables.value.find((t) => t.name === tableName)
 
   if (alreadyMapped) {
-    const newFields = selectedFields.filter(
-      (f) => !alreadyMapped.fields.find((m) => m.path === f.path)
-    )
+    const newFields = fields.filter((f) => !alreadyMapped.fields.find((m) => m.path === f.path))
     alreadyMapped.fields.push(...newFields)
   } else {
     mappedTables.value.push({
       name: tableName,
-      fields: selectedFields
+      fields: fields
     })
   }
 
-  // Deselect after mapping
-  selectedFields.forEach((f) => (f.selected = false))
+  // Reset UI
+  if (isCreatingNew.value) {
+    fields.forEach((f) => (f.selected = false))
+    newTableName.value = ''
+  } else {
+    existingTableFieldMap.value = {}
+    selectedTable.value = ''
+  }
 
-  selectedTable.value = ''
-  newTableName.value = ''
   isCreatingNew.value = false
 }
+
 
 watchEffect(() => {
   const existingPaths = new Set(allFields.value.map((f) => f.path))
@@ -299,6 +346,19 @@ watchEffect(() => {
   }
 
   mappedTables.value = mappedTables.value.filter((t) => t.fields.length > 0)
+})
+
+
+const existingTableFieldMap = ref<Record<string, string>>({})
+
+const selectedTableColumns = computed(() => {
+  if (!fullMetadata.value || !selectedTable.value) return []
+  const table = fullMetadata.value.tables.find(t => t.tableName === selectedTable.value)
+  return table?.columns || []
+})
+
+watch(selectedTable, (newVal) => {
+  existingTableFieldMap.value = {}
 })
 
 </script>

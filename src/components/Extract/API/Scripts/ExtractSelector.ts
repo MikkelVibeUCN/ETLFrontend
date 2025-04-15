@@ -1,81 +1,87 @@
-import { ref } from 'vue';
-import { JSONFormatService } from '../../../../shared/scripts/Services/JSONFormatService';
-import { buildFieldTreeFromJson, type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder';
+import { ref } from "vue";
+import { JSONFormatService } from "../../../../shared/scripts/Services/JSONFormatService";
+import {
+  buildFieldTreeFromJson,
+  type FieldNode,
+} from "../../../../shared/scripts/jsonTreeBuilder";
 
 export function useFormatLoader() {
-    // State
-    const jsonFormat = ref('');
-    const fieldTree = ref<FieldNode[]>([]);
-    const loadingFormat = ref(false);
-    const renderedContentKey = ref(0);
-    const hasRenderedOnce = ref(false);
-    const isTransitioningOut = ref(false);
-    const showContentSection = ref(false);
+  // State
+  const jsonFormat = ref("");
+  const fieldTree = ref<FieldNode[]>([]);
+  const loadingFormat = ref(false);
+  const renderedContentKey = ref(0);
+  const hasRenderedOnce = ref(false);
+  const isTransitioningOut = ref(false);
+  const showContentSection = ref(false);
 
-    // Core data fetching logic
-    const fetchJSONFormat = async (url: string, headers: any[]) => {
-        const simplified = await JSONFormatService.fetchJsonStructure(url, headers);
+  // Core data fetching logic
+  const fetchJSONFormat = async (url: string, headers: any[]) => {
+    const simplified = await JSONFormatService.fetchJsonStructure(url, headers);
 
-        jsonFormat.value = JSON.stringify(simplified, null, 2);
-        fieldTree.value = buildFieldTreeFromJson(simplified);
-    };
+    jsonFormat.value = JSON.stringify(simplified, null, 2);
+    fieldTree.value = buildFieldTreeFromJson(simplified);
+  };
 
-    // Handle full format load (initial or direct)
-    const loadFormatImmediately = async (url: string, headers: any[]) => {
-        loadingFormat.value = true;
-        showContentSection.value = true;
+  // Handle full format load (initial or direct)
+  const loadFormatImmediately = async (url: string, headers: any[]) => {
+    loadingFormat.value = true;
+    showContentSection.value = true;
 
-        try {
-            await fetchJSONFormat(url, headers);
-        } catch (error) {
-            console.error('Error loading format:', error);
-            showContentSection.value = false;
-        } finally {
-            loadingFormat.value = false;
-            renderedContentKey.value++;
-            hasRenderedOnce.value = true;
-        }
-    };
+    try {
+      await fetchJSONFormat(url, headers);
+    } 
+    catch (error) {
+      console.error("Error loading format:", error);
+      showContentSection.value = true;
+      throw error; // <--- Add this!
+    } 
+    finally {
+      loadingFormat.value = false;
+      renderedContentKey.value++;
+      hasRenderedOnce.value = true;
+    }
+  };
 
-    // Handle delayed format load after animation
-    const loadFormatAfterTransition = async (url: string, headers: any[]) => {
-        if (!isTransitioningOut.value) return;
+  // Handle delayed format load after animation
+  const loadFormatAfterTransition = async (url: string, headers: any[]) => {
+    if (!isTransitioningOut.value) return;
 
-        loadingFormat.value = true;
+    loadingFormat.value = true;
 
-        try {
-            await fetchJSONFormat(url, headers);
-        } catch (error) {
-            console.error('Error loading format (post-transition):', error);
-            showContentSection.value = false;
-        } finally {
-            loadingFormat.value = false;
-            showContentSection.value = true;
-            renderedContentKey.value++;
-            isTransitioningOut.value = false;
-        }
-    };
+    try {
+      await fetchJSONFormat(url, headers);
+    } catch (error) {
+      console.error("Error loading format (post-transition):", error);
+      showContentSection.value = false;
+    } finally {
+      loadingFormat.value = false;
+      showContentSection.value = true;
+      renderedContentKey.value++;
+      isTransitioningOut.value = false;
+    }
+  };
 
-    // Called from UI — handles conditional logic
-    const triggerFormatLoading = async (url: string, headers: any[]) => {
-        if (jsonFormat.value) {
-            isTransitioningOut.value = true;
-            showContentSection.value = false;
-            return;
-        }
+  // Called from UI — handles conditional logic
+  const triggerFormatLoading = async (url: string, headers: any[]) => {
+    if (jsonFormat.value) {
+      isTransitioningOut.value = true;
+      showContentSection.value = false;
+      return;
+    }
 
-        await loadFormatImmediately(url, headers);
-    };
+    await loadFormatImmediately(url, headers);
+  };
 
-    return {
-        jsonFormat,
-        fieldTree,
-        loadingFormat,
-        renderedContentKey,
-        hasRenderedOnce,
-        isTransitioningOut,
-        showContentSection,
-        triggerFormatLoading,
-        loadFormatAfterTransition,
-    };
+  return {
+    jsonFormat,
+    fieldTree,
+    loadingFormat,
+    renderedContentKey,
+    hasRenderedOnce,
+    isTransitioningOut,
+    showContentSection,
+    triggerFormatLoading,
+    loadFormatAfterTransition,
+  };
 }

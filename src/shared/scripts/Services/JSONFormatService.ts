@@ -12,7 +12,7 @@ export class JSONFormatService {
     try {
       const formattedHeaders = formatHeaders(headers);
 
-      var response = await JSONFormatService.client.get({
+      var response = await this.client.get({
         headers: formattedHeaders,
         url: fullUrl
       });
