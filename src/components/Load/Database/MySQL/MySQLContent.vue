@@ -5,33 +5,42 @@
       <div class="form-row">
         <div class="form-group">
           <label>Server name</label>
-          <input v-model="host" placeholder="e.g. 127.0.0.1" class="input" />
+          <input v-model="host" @input="validationErrors.host = ''" placeholder="e.g. 127.0.0.1" class="input" />
+          <span v-if="validationErrors.host" class="field-error">{{ validationErrors.host }}</span>
         </div>
 
         <div class="form-group">
           <label>Port</label>
-          <input v-model="port" type="number" placeholder="3306" class="input" />
+          <input v-model="port" @input="validationErrors.port = ''" type="number" placeholder="3306" class="input" />
+          <span v-if="validationErrors.port" class="field-error">{{ validationErrors.port }}</span>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label>Login</label>
-          <input v-model="user" placeholder="e.g. root" class="input" />
+          <input v-model="user" @input="validationErrors.user = ''" placeholder="e.g. root" class="input" />
+          <span v-if="validationErrors.user" class="field-error">{{ validationErrors.user }}</span>
         </div>
 
         <div class="form-group">
           <label>Password</label>
-          <input v-model="password" type="password" placeholder="Password" class="input" />
+          <input v-model="password" @input="validationErrors.password = ''" type="password" placeholder="Password" class="input" />
+          <span v-if="validationErrors.password" class="field-error">{{ validationErrors.password }}</span>
         </div>
       </div>
 
       <div class="form-group">
         <label>Database</label>
-        <input v-model="database" placeholder="e.g. my_database" class="input" />
+        <input v-model="database" @input="validationErrors.database = ''" placeholder="e.g. my_database" class="input" />
+        <span v-if="validationErrors.database" class="field-error">{{ validationErrors.database }}</span>
       </div>
 
-      <button type="submit" class="btn">Load Database</button>
+      <button type="submit" class="btn" :disabled="isLoading">
+        {{ isLoading ? 'Connecting...' : 'Load Database' }}
+      </button>
+
+      <div v-if="errorMessage" class="field-error">{{ errorMessage }}</div>
     </form>
 
     <div v-if="connected" class="connected">
@@ -95,12 +104,15 @@ import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder'
 
 const props = defineProps<{ fieldTree: FieldNode[] }>()
 
+const validationErrors = ref<Record<string, string>>({})
+const errorMessage = ref('')
+const isLoading = ref(false)
+
 interface MappedFieldNode extends FieldNode {
   path: string
 }
 
 const mappedTables = ref<{ name: string; fields: MappedFieldNode[] }[]>([])
-
 const host = ref('')
 const port = ref(3306)
 const user = ref('')
@@ -112,9 +124,7 @@ const tables = ref<string[]>([])
 const loadMode = ref('append')
 const connected = ref(false)
 const isCreatingNew = ref(false)
-
 const fieldNodes = ref<FieldNode[]>([])
-
 
 defineExpose({
   getConfig
@@ -142,20 +152,32 @@ function getConfig() {
   }
 }
 
+function validateFields(): boolean {
+  const errors: Record<string, string> = {}
+  if (!host.value) errors.host = 'Server name is required.'
+  if (!port.value) errors.port = 'Port is required.'
+  if (!user.value) errors.user = 'Login is required.'
+  if (!password.value) errors.password = 'Password is required.'
+  if (!database.value) errors.database = 'Database name is required.'
+  validationErrors.value = errors
+  return Object.keys(errors).length === 0
+}
 
-watch(
-  () => props.fieldTree,
-  (newVal) => {
-    if (Array.isArray(newVal)) {
-      fieldNodes.value = newVal
-    }
-  },
-  { immediate: true }
-)
+async function testConnection() {
+  errorMessage.value = ''
+  if (!validateFields()) return
 
-function testConnection() {
-  connected.value = true
-  tables.value = ['users', 'orders', 'products']
+  isLoading.value = true
+  try {
+    await new Promise((res) => setTimeout(res, 500))
+    connected.value = true
+    tables.value = ['users', 'orders', 'products']
+  } catch (e) {
+    connected.value = false
+    errorMessage.value = 'Mock connection failed.'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 function getDisplayName(field: FieldNode | undefined): string {
@@ -187,7 +209,7 @@ function flattenFields(node: FieldNode, parentPath = ''): MappedFieldNode[] {
     return node.children.flatMap((child) => flattenFields(child, path))
   }
 
-  return [{ ...node, path }]
+  return [{ ...node, path, selected: false }]
 }
 
 function flattenTree(tree: FieldNode[]): MappedFieldNode[] {
@@ -225,24 +247,29 @@ function confirmMapping() {
     })
   }
 
-  // Deselect after mapping
   selectedFields.forEach((f) => (f.selected = false))
-
   selectedTable.value = ''
   newTableName.value = ''
   isCreatingNew.value = false
 }
 
+watch(
+  () => props.fieldTree,
+  (newVal) => {
+    if (Array.isArray(newVal)) {
+      fieldNodes.value = newVal
+    }
+  },
+  { immediate: true }
+)
+
 watchEffect(() => {
   const existingPaths = new Set(allFields.value.map((f) => f.path))
-
   for (const table of mappedTables.value) {
     table.fields = table.fields.filter((f) => existingPaths.has(f.path))
   }
-
   mappedTables.value = mappedTables.value.filter((t) => t.fields.length > 0)
 })
-
 </script>
 
 <style scoped>
@@ -294,6 +321,13 @@ label {
   font-weight: 600;
   color: white;
   margin-bottom: 1rem;
+}
+
+.field-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  display: block;
 }
 
 .field-selector {
