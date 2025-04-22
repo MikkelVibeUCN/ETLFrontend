@@ -66,7 +66,13 @@ async function request<T = any>(baseUrl: string, config: RequestConfig, method: 
     throw new Error("Either 'url' or 'endpoint' must be provided");
   }
   
-  const finalUrl = url ?? `${baseUrl}${endpoint}`;
+  let finalUrl = url ?? `${baseUrl}${endpoint}`;
+
+  if (method === 'GET') {
+    const timestamp = `_=${Date.now()}`;
+    finalUrl += finalUrl.includes('?') ? `&${timestamp}` : `?${timestamp}`;
+  }
+
   const formattedBody = formatBody(content);
   
   // Prepare request options
