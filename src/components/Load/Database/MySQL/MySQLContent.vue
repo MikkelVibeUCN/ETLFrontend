@@ -231,16 +231,21 @@ async function testConnection() {
   try {
     const config = getConfig()
     connected.value = await ConfigService.validateLoadConfig(config)
+
     if (connected.value) {
       const metadataDb = await ConfigService.loadMetadata(config) as database
       fullMetadata.value = metadataDb
       tables.value = metadataDb.tables.map(t => t.tableName)
+    } else {
+      errorMessage.value = 'Connection test failed. Please verify your credentials.'
     }
-  } catch {
+  } catch (err: any) {
     connected.value = false
-    errorMessage.value = 'Connection failed. Please check your settings.'
+    errorMessage.value =
+      err?.message || 'Connection failed. Please check your settings.'
   }
 }
+
 
 function getDisplayName(field: FieldNode | undefined): string {
   if (!field) return '(missing)'
