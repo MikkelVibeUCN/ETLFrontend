@@ -91,7 +91,7 @@ import { defineProps, defineEmits, ref, onMounted, computed } from 'vue'
 import ruleConfig from '../Scripts/ruleConfig'
 import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder';
 
-
+import type { TransformConfig } from '../../transformConfig';
 
 const props = defineProps<{ nodes: FieldNode[] }>()
 const emit = defineEmits(['update'])
@@ -178,7 +178,8 @@ onMounted(() => {
 })
 
 defineExpose({
-  getConfig
+  getConfig,
+  setConfig
 })
 
 function getConfig() {
@@ -229,6 +230,70 @@ function getConfig() {
     Filters: filters
   }
 }
+function setConfig(config: TransformConfig) {
+  if (!config) return;
+
+  const { Mappings = [], Filters = [] } = config;
+
+  const ruleDefs = ruleConfig.ruleDefinitions;
+
+  const mapByField = new Map<string, string[]>()
+  const filterByField = new Map<string, { operator: string; value: string }[]>()
+
+  // Map transformation config into per-node rule mappings
+  for (const map of Mappings) {
+    if (!mapByField.has(map.SourceField)) mapByField.set(map.SourceField, []);
+    mapByField.get(map.SourceField)!.push(map.TargetField);
+  }
+
+  for (const filter of Filters) {
+    if (!filterByField.has(filter.Field)) filterByField.set(filter.Field, []);
+    filterByField.get(filter.Field)!.push({
+      operator: filter.Operator,
+      value: filter.Value
+    });
+  }
+
+  const applyRules = (nodes: FieldNode[]) => {
+    for (const node of nodes) {
+      node.rules = []
+      node.ruleValues = node.ruleValues || {}
+      
+      // Set _expanded to true only if the node has rules
+      const hasRules = (mapByField.get(node.name)?.length || 0) > 0 || (filterByField.get(node.name)?.length || 0) > 0;
+      node._expanded = hasRules;
+
+      // 🧠 1. Apply Mapping (e.g. "change_name" rule)
+      const mappings = mapByField.get(node.name) || []
+      for (const targetField of mappings) {
+        const ruleKey = Object.entries(ruleDefs).find(
+          ([_, def]) => def.defaultValue === '$fieldName'
+        )?.[0] || 'change_name'
+
+        node.rules.push(ruleKey)
+        node.ruleValues[`${node.name}_${ruleKey}`] = targetField
+      }
+
+      // 🧠 2. Apply Filters (e.g. "equals", "greater_than")
+      const filters = filterByField.get(node.name) || []
+      for (const { operator, value } of filters) {
+        if (!ruleDefs[operator]) continue
+
+        node.rules.push(operator)
+        node.ruleValues[`${node.name}_${operator}`] = value
+      }
+
+      // 🔁 Recurse into children
+      if (node.children?.length) {
+        applyRules(node.children)
+      }
+    }
+  }
+
+  applyRules(props.nodes)
+  emit('update', [...props.nodes]) // emits a new reference
+}
+
 
 </script>
 

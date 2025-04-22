@@ -4,12 +4,7 @@
       <DefaultContentTransform />
     </template>
     <template v-else>
-      <component
-        ref="child"
-        :is="currentComponent"
-        v-bind="resolvedProps"
-        @update="onUpdate"
-      />
+      <component ref="child" :is="currentComponent" v-bind="resolvedProps" @update="onUpdate" />
     </template>
   </div>
 </template>
@@ -37,14 +32,14 @@ export default {
   computed: {
     currentComponent() {
       switch (this.type) {
-        case 'Rules':
+        case 'rules':
           return Rules
         default:
           return null
       }
     },
     resolvedProps() {
-      if (this.type === 'Rules') {
+      if (this.type === 'rules') {
         return {
           nodes: this.componentProps.fieldTree || []
         }
@@ -53,11 +48,11 @@ export default {
     },
     isEmpty() {
       return (
-        this.type === 'Rules' &&
+        this.type === 'rules' &&
         (!this.componentProps.fieldTree || this.componentProps.fieldTree.length === 0)
       )
     },
-    
+
   },
   methods: {
     onUpdate(updatedTree) {
@@ -74,6 +69,26 @@ export default {
         return this.$refs.child.getConfig()
       }
       return {}
+    },
+    setConfig(config) {
+      console.log('setConfig called', config);
+
+      this.$nextTick(() => {
+        const checkChildExistence = () => {
+          if (this.$refs.child && typeof this.$refs.child.setConfig === 'function') {
+            console.log('Calling setConfig on child component');
+            this.$refs.child.setConfig(config);
+          } else {
+            console.log('Child component not ready, retrying...');
+            // Retry after another nextTick to ensure the child is properly mounted
+            setTimeout(() => {
+              this.$nextTick(checkChildExistence);
+            }, 0); // Retry with minimal delay
+          }
+        };
+
+        checkChildExistence(); // Initial check
+      });
     }
   }
 }
@@ -84,6 +99,7 @@ export default {
   min-width: 500px;
   width: auto;
 }
+
 .empty-state {
   padding: 2rem;
   text-align: center;

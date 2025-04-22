@@ -10,7 +10,7 @@
 
     <FormatResult :visible="showContentSection" :loading="loadingFormat" :renderedKey="renderedContentKey"
       :jsonFormat="jsonFormat" :fieldTree="fieldTree" :editing="editingFields" :onLeave="onContentLeft"
-      :toggleEditing="toggleFieldEditing" />
+      :toggleEditing="toggleFieldEditing" :error="formatError" />
 
     <LoadingSpinner v-if="hasRenderedOnce && loadingFormat && !isTransitioningOut" />
   </div>
@@ -26,19 +26,13 @@ import { useFormatLoader } from '../Scripts/ExtractSelector';
 import { type Header } from '../Scripts/useHeaders';
 
 
+const formatError = ref<string | null>(null);
+
+
 const emit = defineEmits(['update-payload'])
 
-const url = ref('https://api.themoviedb.org/3/movie/550?language=en-US');
+const url = ref('');
 const headers = ref<Header[]>([
-  {
-    key: 'Authorization',
-    value: 'Bearer',
-    extra: ''
-  },
-  {
-    key: 'Accept',
-    value: 'application/json'
-  }
 ]);
 
 import { inject, type Ref } from 'vue'
@@ -46,11 +40,14 @@ import type { NodeData } from '../../../../shared/types/canva';
 import type { Edge } from '../../../DraggableCanvas.vue';
 import { defineEmits } from 'vue'
 
+import { type ExtractConfig } from '../../Scripts/extractConfig';
+
 const nodes = inject<Ref<NodeData[]>>('nodes')
 const edges = inject<Ref<Edge[]>>('edges')
 
 defineExpose({
-  getConfig
+  getConfig,
+  setConfig
 })
 
 function getConfig() {
@@ -73,21 +70,17 @@ function getConfig() {
   return {
     Fields: selectedFields,
     SourceInfo: {
-      $type: 'api',
+      $type: 'restapi',
       Url: url.value,
       Headers: resolvedHeaders
     }
   }
 }
 
-
-
-// Optional safety check
 if (!nodes || !edges) {
   throw new Error('nodes and edges must be provided by parent')
 }
 
-// Format logic
 const {
   jsonFormat,
   fieldTree,
@@ -106,23 +99,106 @@ const toggleFieldEditing = () => {
   editingFields.value = !editingFields.value;
 };
 
-// These now pass both arguments correctly
-const getFormat = () => {
-  triggerFormatLoading(url.value, headers.value)
+function setConfig(config: ExtractConfig) {
+  if (!config) return;
 
+  url.value = config.SourceInfo?.Url || '';
+  const rawHeaders = config.SourceInfo?.Headers || {};
+  headers.value = Object.entries(rawHeaders).map(([key, value]) => {
+    if (key === 'Authorization') {
+      const [prefix, ...rest] = value.split(' ');
+      return {
+        key,
+        value: prefix,
+        extra: rest.join(' ')
+      };
+    } else {
+      return { key, value, extra: '' };
+    }
+  });
+
+  const selectedFields = config.Fields || [];
+
+  // Trigger getFormat (loads the fieldTree asynchronously)
+  triggerFormatLoading(url.value, headers.value);
+
+  // Watch for fieldTree to load, then apply selected fields
+  const stopWatch = watch(
+    () => fieldTree.value,
+    (tree) => {
+      if (tree && tree.length > 0 && selectedFields.length > 0) {
+        // Apply selected fields
+        fieldTree.value = tree.map(field => {
+          const isObject = field.children && field.children.length > 0;
+          const updatedField = {
+            ...field,
+            selected: selectedFields.includes(field.name)
+          };
+
+          // If it's an object, uncheck all children
+          if (isObject && field.children) {
+            updatedField.children = field.children.map(child => ({
+              ...child,
+              selected: false // Uncheck all children
+            }));
+          }
+
+          return updatedField;
+        });
+
+        // Emit updated fieldTree to parent
+        emit('update-payload', { fieldTree: toRaw(fieldTree.value) });
+
+        stopWatch(); // Stop watching after the first successful update
+      }
+    },
+    { immediate: true, deep: true }
+  );
+}
+const getFormat = async () => {
+  formatError.value = null; // clear previous error
+
+  try {
+    await triggerFormatLoading(url.value, headers.value);
+  } catch (err: any) {
+    formatError.value = err?.message || 'Unknown error occurred while loading format.';
+  }
+
+  // Emit updated fieldTree when loaded
   watch(
     () => fieldTree.value,
     (newTree) => {
       if (newTree) {
-        emit('update-payload', { fieldTree: toRaw(newTree) })
+        emit('update-payload', { fieldTree: toRaw(newTree) });
       }
     },
     { immediate: true, deep: true }
-  )
+  );
+};
+
+
+watch(
+  () => fieldTree.value,
+  (newTree) => {
+    if (newTree) {
+      // Emit updated fieldTree whenever it changes
+      console.log('[APIContent] fieldTree updated:', toRaw(newTree));
+      emit('update-payload', { fieldTree: toRaw(newTree) });
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+
+
+const onContentLeft = () => {
+  try {
+    loadFormatAfterTransition(url.value, headers.value);
+  }
+  catch (err: any) {
+    formatError.value = err?.message
+  }
 }
-
-
-const onContentLeft = () => loadFormatAfterTransition(url.value, headers.value);
 </script>
 
 <style scoped>

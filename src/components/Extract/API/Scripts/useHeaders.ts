@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import rawHeaderConfig from '../HeaderConfig.json';
 
 
@@ -14,11 +14,7 @@ export type HeaderConfigItem = { [key: string]: string[] };
 // ✅ Cast safely from unknown
 const headerConfig = rawHeaderConfig as unknown as HeaderConfigItem[];
 
-export function useHeaders() {
-  const headers = ref<Header[]>([
-    { key: 'Authorization', value: 'Bearer', extra: '' },
-    { key: 'Accept', value: 'application/json' }
-  ]);
+export function useHeaders(headers: Header[]) {
 
   const availableHeaderKeys = computed<string[]>(() =>
     headerConfig.map(obj => Object.keys(obj)[0])
@@ -30,15 +26,15 @@ export function useHeaders() {
   }
 
   function isHeaderTypeDisabled(type: string, currentHeader: Header): boolean {
-    return headers.value.some(h => h.key === type && h !== currentHeader);
+    return headers.some(h => h.key === type && h !== currentHeader);
   }
 
   function addHeader(): void {
-    headers.value.push({ key: '', value: '', extra: '' });
+    headers.push({ key: '', value: '', extra: '' });
   }
 
   function removeHeader(index: number): void {
-    headers.value.splice(index, 1);
+    headers.splice(index, 1);
   }
 
   return {

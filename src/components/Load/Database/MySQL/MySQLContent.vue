@@ -36,10 +36,7 @@
         <span v-if="validationErrors.database" class="field-error">{{ validationErrors.database }}</span>
       </div>
 
-      <button type="submit" class="btn" :disabled="isLoading">
-        {{ isLoading ? 'Connecting...' : 'Load Database' }}
-      </button>
-
+      <button type="submit" class="btn">Load Database</button>
       <div v-if="errorMessage" class="field-error">{{ errorMessage }}</div>
     </form>
 
@@ -64,7 +61,20 @@
       </div>
 
       <label>Assign Fields to Table</label>
-      <div class="field-selector">
+
+      <div v-if="!isCreatingNew && selectedTable" class="field-selector">
+        <div v-for="column in selectedTableColumns" :key="column" class="checkbox-row">
+          <label>{{ column }}</label>
+          <select v-model="existingTableFieldMap[column]" class="input">
+            <option disabled value="">-- Select Field --</option>
+            <option v-for="field in allFields" :key="field.path" :value="field.path">
+              {{ getDisplayName(field) }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div v-else class="field-selector">
         <div v-for="field in unmappedFields" :key="field.path" class="checkbox-row">
           <label>
             <input type="checkbox" v-model="field.selected" />
@@ -72,6 +82,7 @@
           </label>
         </div>
       </div>
+
 
       <label>Load Mode</label>
       <select v-model="loadMode" class="input">
@@ -101,15 +112,17 @@
 <script lang="ts" setup>
 import { ref, computed, watch, watchEffect } from 'vue'
 import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder'
+import { type LoadConfig } from '../../loadConfig'
+import { ConfigService } from '../../../../shared/scripts/Services/ConfigService'
+import type { database } from '../../../../shared/types/databaseFormat'
 
 const props = defineProps<{ fieldTree: FieldNode[] }>()
-
 const validationErrors = ref<Record<string, string>>({})
 const errorMessage = ref('')
-const isLoading = ref(false)
 
 interface MappedFieldNode extends FieldNode {
-  path: string
+  path: string,
+  selected: boolean
 }
 
 const mappedTables = ref<{ name: string; fields: MappedFieldNode[] }[]>([])
@@ -125,31 +138,80 @@ const loadMode = ref('append')
 const connected = ref(false)
 const isCreatingNew = ref(false)
 const fieldNodes = ref<FieldNode[]>([])
+const fullMetadata = ref<database | null>(null)
+const existingTableFieldMap = ref<Record<string, string>>({})
 
-defineExpose({
-  getConfig
+const selectedTableColumns = computed(() => {
+  if (!fullMetadata.value || !selectedTable.value) return []
+  return fullMetadata.value.tables.find(t => t.tableName === selectedTable.value)?.columns || []
 })
 
-function getConfig() {
-  if (!mappedTables.value.length) {
-    throw new Error('No mapped tables found.')
-  }
+watch(() => props.fieldTree, (newVal) => {
+  if (Array.isArray(newVal)) fieldNodes.value = newVal
+}, { immediate: true })
 
+watch(selectedTable, () => {
+  existingTableFieldMap.value = {}
+})
+
+defineExpose({ getConfig, setConfig })
+
+function getConfig(): LoadConfig {
   const connectionString = `Server=${host.value};Port=${port.value};User Id=${user.value};Password=${password.value};Database=${database.value};`
-
   return {
-    LoadTargetConfig: {
-      TargetInfo: {
-        $type: 'mysql',
-        ConnectionString: connectionString,
-        LoadMode: loadMode.value
-      },
-      Tables: mappedTables.value.map(table => ({
-        TargetTable: table.name,
-        Fields: table.fields.map(f => f.path)
-      }))
-    }
+    TargetInfo: {
+      $type: 'mysql',
+      ConnectionString: connectionString,
+      LoadMode: loadMode.value
+    },
+    Tables: mappedTables.value.map(table => ({
+      TargetTable: table.name,
+      Fields: table.fields.map(f => f.path)
+    }))
   }
+}
+
+function createFallbackField(path: string): MappedFieldNode {
+  return {
+    name: path.split('.').pop() || path,
+    path,
+    dataType: 'unknown',
+    selected: false,
+    rules: [],
+    ruleValues: {},
+    children: [],
+    _expanded: false
+  }
+}
+
+function setConfig(config: LoadConfig) {
+  const info = config.TargetInfo
+  const tables = config.Tables || []
+  if (info?.ConnectionString) {
+    const parts = Object.fromEntries(info.ConnectionString.split(';')
+      .filter(Boolean).map(p => p.split('=')))
+    host.value = parts.Server || ''
+    port.value = Number(parts.Port || 3306)
+    user.value = parts['User Id'] || ''
+    password.value = parts.Password || ''
+    database.value = parts.Database || ''
+  }
+  loadMode.value = info?.LoadMode || 'append'
+  connected.value = true
+
+  const stop = watch(() => fieldNodes.value.length, (len) => {
+    if (len > 0) {
+      mappedTables.value = tables.map(t => ({
+        name: t.TargetTable,
+        fields: t.Fields.map(path => {
+          const found = findFieldByPath(path)
+          return found ? { ...found, path } : createFallbackField(path)
+
+        })
+      }))
+      stop()
+    }
+  }, { immediate: true })
 }
 
 function validateFields(): boolean {
@@ -166,17 +228,17 @@ function validateFields(): boolean {
 async function testConnection() {
   errorMessage.value = ''
   if (!validateFields()) return
-
-  isLoading.value = true
   try {
-    await new Promise((res) => setTimeout(res, 500))
-    connected.value = true
-    tables.value = ['users', 'orders', 'products']
-  } catch (e) {
+    const config = getConfig()
+    connected.value = await ConfigService.validateLoadConfig(config)
+    if (connected.value) {
+      const metadataDb = await ConfigService.loadMetadata(config) as database
+      fullMetadata.value = metadataDb
+      tables.value = metadataDb.tables.map(t => t.tableName)
+    }
+  } catch {
     connected.value = false
-    errorMessage.value = 'Mock connection failed.'
-  } finally {
-    isLoading.value = false
+    errorMessage.value = 'Connection failed. Please check your settings.'
   }
 }
 
@@ -192,87 +254,85 @@ function findFieldByPath(path: string): FieldNode | undefined {
   const parts = path.split('.')
   let current: FieldNode | undefined
   let level = fieldNodes.value
-
   for (const part of parts) {
-    current = level.find((n) => n.name === part)
+    current = level.find(n => n.name === part)
     if (!current) return undefined
     level = current.children || []
   }
-
   return current
 }
 
 function flattenFields(node: FieldNode, parentPath = ''): MappedFieldNode[] {
   const path = parentPath ? `${parentPath}.${node.name}` : node.name
-
-  if (node.children && node.children.length) {
-    return node.children.flatMap((child) => flattenFields(child, path))
-  }
-
-  return [{ ...node, path, selected: false }]
+  return node.children?.length
+    ? node.children.flatMap(child => flattenFields(child, path))
+    : [{ ...node, path }]
 }
 
 function flattenTree(tree: FieldNode[]): MappedFieldNode[] {
-  return tree.flatMap((node) => flattenFields(node))
+  return tree.flatMap(node => flattenFields(node))
 }
 
 const allFields = computed(() => flattenTree(fieldNodes.value))
-
-const mappedPaths = computed(() => {
-  return new Set(mappedTables.value.flatMap((t) => t.fields.map((f) => f.path)))
-})
-
-const unmappedFields = computed(() =>
-  allFields.value.filter((f) => !mappedPaths.value.has(f.path))
-)
+const mappedPaths = computed(() => new Set(mappedTables.value.flatMap(t => t.fields.map(f => f.path))))
+const unmappedFields = computed(() => allFields.value.filter(f => !mappedPaths.value.has(f.path)))
 
 function confirmMapping() {
   const tableName = isCreatingNew.value ? newTableName.value : selectedTable.value
   if (!tableName) return
 
-  const selectedFields = unmappedFields.value.filter((f) => f.selected)
-  if (!selectedFields.length) return
+  let fields: MappedFieldNode[] = []
 
-  const alreadyMapped = mappedTables.value.find((t) => t.name === tableName)
-
-  if (alreadyMapped) {
-    const newFields = selectedFields.filter(
-      (f) => !alreadyMapped.fields.find((m) => m.path === f.path)
-    )
-    alreadyMapped.fields.push(...newFields)
+  if (isCreatingNew.value) {
+    fields = unmappedFields.value.filter(f => f.selected)
   } else {
-    mappedTables.value.push({
-      name: tableName,
-      fields: selectedFields
-    })
+    fields = Object.entries(existingTableFieldMap.value)
+      .filter(([_, path]) => path)
+      .map(([_, path]) => {
+        const found = findFieldByPath(path)
+        return found ? { ...found, path } : createFallbackField(path)
+
+      })
   }
 
-  selectedFields.forEach((f) => (f.selected = false))
-  selectedTable.value = ''
-  newTableName.value = ''
+  if (!fields.length) return
+
+  const existing = mappedTables.value.find(t => t.name === tableName)
+  if (existing) {
+    const newFields = fields.filter(f => !existing.fields.find(m => m.path === f.path))
+    existing.fields.push(...newFields)
+  } else {
+    mappedTables.value.push({ name: tableName, fields })
+  }
+
+  if (isCreatingNew.value) {
+    fields.forEach(f => (f.selected = false))
+    newTableName.value = ''
+  } else {
+    existingTableFieldMap.value = {}
+    selectedTable.value = ''
+  }
   isCreatingNew.value = false
 }
 
-watch(
-  () => props.fieldTree,
-  (newVal) => {
-    if (Array.isArray(newVal)) {
-      fieldNodes.value = newVal
-    }
-  },
-  { immediate: true }
-)
-
 watchEffect(() => {
-  const existingPaths = new Set(allFields.value.map((f) => f.path))
+  const existingPaths = new Set(allFields.value.map(f => f.path))
   for (const table of mappedTables.value) {
-    table.fields = table.fields.filter((f) => existingPaths.has(f.path))
+    table.fields = table.fields.filter(f => existingPaths.has(f.path))
   }
-  mappedTables.value = mappedTables.value.filter((t) => t.fields.length > 0)
+  mappedTables.value = mappedTables.value.filter(t => t.fields.length > 0)
 })
 </script>
 
 <style scoped>
+
+.field-error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
 .input {
   padding: 0.5rem;
   border: 1px solid #ccc;

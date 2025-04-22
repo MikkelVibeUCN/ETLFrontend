@@ -25,7 +25,7 @@ export default {
   computed: {
     currentComponent() {
       switch (this.type) {
-        case 'API':
+        case 'restapi':
           return 'APIContent';
         default:
           return null;
@@ -42,6 +42,11 @@ export default {
         return this.$refs.child.getConfig()
       }
       return {}
+    },
+    setConfig(config) {
+      if (this.$refs.child && typeof this.$refs.child.setConfig === 'function') {
+        this.$refs.child.setConfig(config)
+      }
     }
   }
 }

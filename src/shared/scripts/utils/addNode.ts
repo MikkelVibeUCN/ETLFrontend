@@ -2,6 +2,8 @@ import { nextTick, type Ref } from 'vue'
 import { isOverlapping, getNodeRect, type Rect } from './geometry'
 import type { NodeData, ContextMenuData } from '../../types/canva'
 import { findNodeDefinition } from '../../types/nodeRegistry'
+import ETLNodeWrapper from '../../../components/ETLNodeWrapper.vue'
+
 
 let nextNodeId = 1 // global counter
 
@@ -61,8 +63,6 @@ function findValidNodePosition(
     y: y + Math.random() * 100
   }
 }
-
-
 
 export async function addNode(
   type: string,
