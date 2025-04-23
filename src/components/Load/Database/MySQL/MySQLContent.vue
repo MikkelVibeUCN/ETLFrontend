@@ -242,7 +242,7 @@ function createFallbackField(path: string): MappedFieldNode {
   }
 }
 
-function setConfig(config: LoadConfig) {
+async function setConfig(config: LoadConfig) {
   const info = config.TargetInfo
   const tables = config.Tables || []
 
@@ -272,12 +272,13 @@ function setConfig(config: LoadConfig) {
       .join(';')
 
     if (extra.value) {
-      extra.value += ';' // ensure trailing semicolon
+      extra.value += ';'
     }
   }
 
   loadMode.value = info?.LoadMode || 'append'
-  connected.value = true
+
+  await testConnection()
 
   const stop = watch(() => fieldNodes.value.length, (len) => {
     if (len > 0) {
