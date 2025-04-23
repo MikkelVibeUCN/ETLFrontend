@@ -1,7 +1,18 @@
 <template>
   <div>
-    <h3 class="title">MySQL Connection</h3>
+    <h3 class="title">Database Connection</h3>
     <form @submit.prevent="testConnection">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Database Type</label>
+          <select v-model="databaseType" class="input">
+            <option v-for="option in databaseOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label>Server name</label>
@@ -25,15 +36,27 @@
 
         <div class="form-group">
           <label>Password</label>
-          <input v-model="password" @input="validationErrors.password = ''" type="password" placeholder="Password" class="input" />
+          <input v-model="password" @input="validationErrors.password = ''" type="password" placeholder="Password"
+            class="input" />
           <span v-if="validationErrors.password" class="field-error">{{ validationErrors.password }}</span>
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Database</label>
+          <input v-model="database" @input="validationErrors.database = ''" placeholder="e.g. my_database"
+            class="input" />
+          <span v-if="validationErrors.database" class="field-error">{{ validationErrors.database }}</span>
+        </div>
+      </div>
 
-      <div class="form-group">
-        <label>Database</label>
-        <input v-model="database" @input="validationErrors.database = ''" placeholder="e.g. my_database" class="input" />
-        <span v-if="validationErrors.database" class="field-error">{{ validationErrors.database }}</span>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Additional config</label>
+          <input v-model="extra" @input="validationErrors.extra = ''" placeholder="e.g. AllowPublicKeyRetrieval=True;"
+            class="input" />
+          <span v-if="validationErrors.extra" class="field-error">{{ validationErrors.extra }}</span>
+        </div>
       </div>
 
       <button type="submit" class="btn">Load Database</button>
@@ -63,14 +86,26 @@
       <label>Assign Fields to Table</label>
 
       <div v-if="!isCreatingNew && selectedTable" class="field-selector">
-        <div v-for="column in selectedTableColumns" :key="column" class="checkbox-row">
-          <label>{{ column }}</label>
-          <select v-model="existingTableFieldMap[column]" class="input">
+        <div v-for="column in filteredTableColumns" :key="column.columnName" class="checkbox-row">
+          <label>
+            {{ column.columnName }} 
+            <span class="column-type">({{ column.dataType }})</span>
+            <span v-if="column.isNullable === false" class="required-field">*</span>
+          </label>
+          <select 
+            v-model="existingTableFieldMap[column.columnName]" 
+            class="input"
+            :class="{ 'invalid-mapping': isMappingInvalid(column, existingTableFieldMap[column.columnName]) }"
+          >
             <option disabled value="">-- Select Field --</option>
-            <option v-for="field in allFields" :key="field.path" :value="field.path">
-              {{ getDisplayName(field) }}
+            <option v-for="field in getCompatibleFields(column)" :key="field.path" :value="field.path">
+              {{ getDisplayName(field) }} ({{ field.dataType }})
             </option>
           </select>
+          <span v-if="isRequiredColumnUnmapped(column)" class="field-error">Required field!</span>
+          <span v-if="isMappingInvalid(column, existingTableFieldMap[column.columnName])" class="field-error">
+            Type mismatch!
+          </span>
         </div>
       </div>
 
@@ -83,7 +118,6 @@
         </div>
       </div>
 
-
       <label>Load Mode</label>
       <select v-model="loadMode" class="input">
         <option value="append">Append</option>
@@ -91,7 +125,8 @@
         <option value="insert_ignore">Insert Ignore</option>
       </select>
 
-      <button class="btn" @click="confirmMapping">Confirm Table Mapping</button>
+      <button class="btn" @click="confirmMapping" :disabled="hasMappingErrors">Confirm Table Mapping</button>
+      <div v-if="hasMappingErrors" class="field-error">Please fix validation errors before confirming</div>
     </div>
 
     <div v-if="mappedTables.length" class="mapped-tables">
@@ -112,25 +147,31 @@
 <script lang="ts" setup>
 import { ref, computed, watch, watchEffect } from 'vue'
 import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder'
-import { type LoadConfig } from '../../loadConfig'
 import { ConfigService } from '../../../../shared/scripts/Services/ConfigService'
-import type { database } from '../../../../shared/types/databaseFormat'
+import { createLoadConfig, type LoadConfig } from '../../loadConfig'
+import type { DatabaseMetadata, DatabaseColumn } from '../../../../shared/types/databaseFormat'
+// Database options
+const databaseOptions = [
+  { label: "MySQL", value: "mysql" },
+]
 
 const props = defineProps<{ fieldTree: FieldNode[] }>()
 const validationErrors = ref<Record<string, string>>({})
 const errorMessage = ref('')
 
-interface MappedFieldNode extends FieldNode {
+export interface MappedFieldNode extends FieldNode {
   path: string,
   selected: boolean
 }
 
 const mappedTables = ref<{ name: string; fields: MappedFieldNode[] }[]>([])
+const databaseType = ref('mysql')
 const host = ref('')
 const port = ref(3306)
 const user = ref('')
 const password = ref('')
 const database = ref('')
+const extra = ref('')
 const selectedTable = ref('')
 const newTableName = ref('')
 const tables = ref<string[]>([])
@@ -138,12 +179,30 @@ const loadMode = ref('append')
 const connected = ref(false)
 const isCreatingNew = ref(false)
 const fieldNodes = ref<FieldNode[]>([])
-const fullMetadata = ref<database | null>(null)
+const fullMetadata = ref<DatabaseMetadata | null>(null)
 const existingTableFieldMap = ref<Record<string, string>>({})
 
 const selectedTableColumns = computed(() => {
   if (!fullMetadata.value || !selectedTable.value) return []
-  return fullMetadata.value.tables.find(t => t.tableName === selectedTable.value)?.columns || []
+  const table = fullMetadata.value.tables.find(t => t.tableName === selectedTable.value)
+  return table?.columns || []
+})
+
+// Filter out auto-incrementing columns
+const filteredTableColumns = computed(() => {
+  return selectedTableColumns.value.filter(column => !column.isAutoIncrement)
+})
+
+const hasMappingErrors = computed(() => {
+  if (isCreatingNew.value) return false
+
+  return filteredTableColumns.value.some(column => {
+    const fieldPath = existingTableFieldMap.value[column.columnName]
+    return (
+      (column.isNullable === false && !fieldPath) ||
+      (fieldPath && isMappingInvalid(column, fieldPath))
+    )
+  })
 })
 
 watch(() => props.fieldTree, (newVal) => {
@@ -157,18 +216,17 @@ watch(selectedTable, () => {
 defineExpose({ getConfig, setConfig })
 
 function getConfig(): LoadConfig {
-  const connectionString = `Server=${host.value};Port=${port.value};User Id=${user.value};Password=${password.value};Database=${database.value};`
-  return {
-    TargetInfo: {
-      $type: 'mysql',
-      ConnectionString: connectionString,
-      LoadMode: loadMode.value
-    },
-    Tables: mappedTables.value.map(table => ({
-      TargetTable: table.name,
-      Fields: table.fields.map(f => f.path)
-    }))
-  }
+  return createLoadConfig(
+    databaseType.value,
+    loadMode.value,
+    mappedTables.value,
+    host.value,
+    port.value,
+    user.value,
+    password.value,
+    database.value,
+    extra.value
+  ) as LoadConfig
 }
 
 function createFallbackField(path: string): MappedFieldNode {
@@ -187,15 +245,37 @@ function createFallbackField(path: string): MappedFieldNode {
 function setConfig(config: LoadConfig) {
   const info = config.TargetInfo
   const tables = config.Tables || []
-  if (info?.ConnectionString) {
-    const parts = Object.fromEntries(info.ConnectionString.split(';')
-      .filter(Boolean).map(p => p.split('=')))
-    host.value = parts.Server || ''
-    port.value = Number(parts.Port || 3306)
-    user.value = parts['User Id'] || ''
-    password.value = parts.Password || ''
-    database.value = parts.Database || ''
+
+  if (info?.$type) {
+    databaseType.value = info.$type
   }
+
+  if (info?.ConnectionString) {
+    const pairs = info.ConnectionString
+      .split(';')
+      .filter(Boolean)
+      .map(p => p.split('='))
+    
+    const knownKeys = ['Server', 'Port', 'User', 'Password', 'Database']
+    const configMap = Object.fromEntries(pairs)
+
+    host.value = configMap.Server || ''
+    port.value = Number(configMap.Port || 3306)
+    user.value = configMap['User'] || ''
+    password.value = configMap.Password || ''
+    database.value = configMap.Database || ''
+
+    // Build `extra` from unknown keys
+    extra.value = pairs
+      .filter(([key]) => !knownKeys.includes(key))
+      .map(pair => pair.join('='))
+      .join(';')
+
+    if (extra.value) {
+      extra.value += ';' // ensure trailing semicolon
+    }
+  }
+
   loadMode.value = info?.LoadMode || 'append'
   connected.value = true
 
@@ -203,10 +283,10 @@ function setConfig(config: LoadConfig) {
     if (len > 0) {
       mappedTables.value = tables.map(t => ({
         name: t.TargetTable,
-        fields: t.Fields.map(path => {
-          const found = findFieldByPath(path)
-          return found ? { ...found, path } : createFallbackField(path)
-
+        fields: t.Fields.map(({ SourceField, TargetColumn }) => {
+          const found = findFieldByPath(SourceField)
+          const baseField = found ? { ...found, path: SourceField } : createFallbackField(SourceField)
+          return { ...baseField, name: TargetColumn }
         })
       }))
       stop()
@@ -233,7 +313,7 @@ async function testConnection() {
     connected.value = await ConfigService.validateLoadConfig(config)
 
     if (connected.value) {
-      const metadataDb = await ConfigService.loadMetadata(config) as database
+      const metadataDb = await ConfigService.loadMetadata(config) as DatabaseMetadata
       fullMetadata.value = metadataDb
       tables.value = metadataDb.tables.map(t => t.tableName)
     } else {
@@ -245,7 +325,6 @@ async function testConnection() {
       err?.message || 'Connection failed. Please check your settings.'
   }
 }
-
 
 function getDisplayName(field: FieldNode | undefined): string {
   if (!field) return '(missing)'
@@ -278,6 +357,61 @@ function flattenTree(tree: FieldNode[]): MappedFieldNode[] {
   return tree.flatMap(node => flattenFields(node))
 }
 
+// Type compatibility checking
+function isTypeCompatible(dbType: string, fieldType: string): boolean {
+  dbType = dbType.toLowerCase()
+  fieldType = fieldType.toLowerCase()
+  
+  // Check if database type is numeric (int, decimal, float, etc)
+  const isDbNumeric = /int|decimal|float|double|number|numeric/i.test(dbType)
+  
+  // Check if field type is numeric
+  const isFieldNumeric = /number|int|float|decimal|double/i.test(fieldType)
+  
+  // Check if database type is string/text based
+  const isDbText = /varchar|char|text|string/i.test(dbType)
+  
+  // Check if field type is string/text based
+  const isFieldText = /string|text/i.test(fieldType)
+  
+  // Check if database type is date/time
+  const isDbDateTime = /date|time|timestamp/i.test(dbType)
+  
+  // Check if field type is date/time
+  const isFieldDateTime = /date|time/i.test(fieldType)
+  
+  // Special case: numbers can be assigned to string fields
+  if (isDbText && isFieldNumeric) return true
+  
+  // Basic compatibility check
+  return (isDbNumeric && isFieldNumeric) || 
+         (isDbText && isFieldText) ||
+         (isDbDateTime && isFieldDateTime) ||
+         dbType === fieldType
+}
+
+function isMappingInvalid(column: DatabaseColumn, fieldPath: string): boolean {
+  if (!fieldPath) return false
+  
+  const field = findFieldByPath(fieldPath)
+  if (!field || !field.dataType) return false
+  
+  return !isTypeCompatible(column.dataType, field.dataType)
+}
+
+function isRequiredColumnUnmapped(column: DatabaseColumn): boolean {
+  return column.isNullable === false && !existingTableFieldMap.value[column.columnName]
+}
+
+function getCompatibleFields(column: DatabaseColumn): MappedFieldNode[] {
+  return allFields.value.filter(field => {
+    // If we don't have field type information, show all fields
+    if (!field.dataType) return true
+    
+    return isTypeCompatible(column.dataType, field.dataType)
+  })
+}
+
 const allFields = computed(() => flattenTree(fieldNodes.value))
 const mappedPaths = computed(() => new Set(mappedTables.value.flatMap(t => t.fields.map(f => f.path))))
 const unmappedFields = computed(() => allFields.value.filter(f => !mappedPaths.value.has(f.path)))
@@ -285,6 +419,11 @@ const unmappedFields = computed(() => allFields.value.filter(f => !mappedPaths.v
 function confirmMapping() {
   const tableName = isCreatingNew.value ? newTableName.value : selectedTable.value
   if (!tableName) return
+  
+  // Check if there are validation errors when using existing table
+  if (!isCreatingNew.value && hasMappingErrors.value) {
+    return
+  }
 
   let fields: MappedFieldNode[] = []
 
@@ -293,10 +432,10 @@ function confirmMapping() {
   } else {
     fields = Object.entries(existingTableFieldMap.value)
       .filter(([_, path]) => path)
-      .map(([_, path]) => {
+      .map(([column, path]) => {
         const found = findFieldByPath(path)
-        return found ? { ...found, path } : createFallbackField(path)
-
+        const baseField = found ? { ...found, path } : createFallbackField(path)
+        return { ...baseField, name: column } // Use column name from the existing table
       })
   }
 
@@ -330,7 +469,6 @@ watchEffect(() => {
 </script>
 
 <style scoped>
-
 .field-error {
   color: #ff6b6b;
   font-size: 0.85rem;
@@ -346,6 +484,11 @@ watchEffect(() => {
   color: white;
 }
 
+.invalid-mapping {
+  border-color: #ff6b6b;
+  outline: 1px solid #ff6b6b;
+}
+
 .btn {
   margin-top: 1rem;
   padding: 0.5rem 1.5rem;
@@ -356,10 +499,27 @@ watchEffect(() => {
   cursor: pointer;
 }
 
+.btn:disabled {
+  background-color: #4f46e580;
+  cursor: not-allowed;
+}
+
 label {
   margin-bottom: 0.25rem;
   color: white;
   display: block;
+}
+
+.required-field {
+  color: #ff6b6b;
+  margin-left: 3px;
+  font-weight: bold;
+}
+
+.column-type {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-left: 3px;
 }
 
 .form-row {
@@ -402,6 +562,13 @@ label {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .checkbox-row label {
