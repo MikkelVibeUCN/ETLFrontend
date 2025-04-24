@@ -5,6 +5,7 @@ import { type Component } from "vue"
 import type { ExtractConfig } from "../../components/Extract/Scripts/extractConfig"
 import type { TransformConfig } from "../../components/Transform/transformConfig"
 import type { LoadConfig } from "../../components/Load/loadConfig"
+import type { PipelineConfig } from "./PipelineConfig"
 
 export interface ETLComponent {
   getConfig: () => any
@@ -26,7 +27,7 @@ export class CreateConfig {
   build(pipelineId = '') {
     let extractConfig: ExtractConfig | null = null
     let transformConfig: TransformConfig | null = null
-    let loadTargetConfig: LoadConfig | null = null
+    let loadConfig: LoadConfig | null = null
 
     // Iterate over the nodes and components
     for (let i = 0; i < this.nodes.length; i++) {
@@ -55,13 +56,13 @@ export class CreateConfig {
           break
 
         case 'load':
-          loadTargetConfig = config.LoadTargetConfig
+          loadConfig = config
           break
       }
     }
 
     // Throw an error if any part of the pipeline configuration is missing
-    if (!extractConfig || !transformConfig || !loadTargetConfig) {
+    if (!extractConfig || !transformConfig || !loadConfig) {
       throw new Error('Missing part of the pipeline config (extract, transform, or load)')
     }
 
@@ -70,7 +71,7 @@ export class CreateConfig {
       Id: pipelineId,
       ExtractConfig: extractConfig,
       TransformConfig: transformConfig,
-      LoadTargetConfig: loadTargetConfig
-    }
+      LoadConfig: loadConfig
+    } as PipelineConfig
   }
 }

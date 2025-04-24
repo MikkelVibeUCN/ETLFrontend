@@ -6,7 +6,7 @@ export interface PipelineConfig {
   Id: string;
   ExtractConfig: ExtractConfig;
   TransformConfig: TransformConfig;
-  LoadTargetConfig: LoadConfig;
+  LoadConfig: LoadConfig;
 }
 
 export function createBlankConfig(): PipelineConfig {
@@ -25,7 +25,7 @@ export function createBlankConfig(): PipelineConfig {
       Filters: [],
       Mappings: [],
     },
-    LoadTargetConfig: {
+    LoadConfig: {
       Tables: [],
       TargetInfo: {
         $type: "",

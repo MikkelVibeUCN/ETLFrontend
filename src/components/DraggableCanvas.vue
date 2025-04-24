@@ -118,7 +118,7 @@ import type { LoadConfig } from './Load/loadConfig'
 async function loadFromPipelineConfig(config: PipelineConfig) {
   const extractConfig = config.ExtractConfig as ExtractConfig;
   const transformConfig = config.TransformConfig as TransformConfig;
-  const loadConfig = config.LoadTargetConfig as LoadConfig;
+  const loadConfig = config.LoadConfig as LoadConfig;
 
   // Initialize position if needed
   if (!contextMenu.worldX || !contextMenu.worldY) {
