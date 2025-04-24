@@ -8,9 +8,16 @@
 
     <LoadingSpinner v-if="loadingFormat" />
 
-    <FormatResult :visible="showContentSection" :loading="loadingFormat" :renderedKey="renderedContentKey"
-      :jsonFormat="jsonFormat" :fieldTree="fieldTree" :editing="editingFields" :onLeave="onContentLeft"
-      :toggleEditing="toggleFieldEditing" />
+    <FormatResult 
+      :visible="showContentSection" 
+      :loading="loadingFormat" 
+      :renderedKey="renderedContentKey"
+      :jsonFormat="jsonFormat" 
+      :fieldTree="fieldTree" 
+      :editing="editingFields" 
+      :onLeave="onContentLeft"
+      :toggleEditing="toggleFieldEditing" 
+      :error="formatError" />
 
     <LoadingSpinner v-if="hasRenderedOnce && loadingFormat && !isTransitioningOut" />
   </div>
@@ -25,19 +32,17 @@ import LoadingSpinner from '../Vue/LoadingSpinner.vue';
 import { useFormatLoader } from '../Scripts/ExtractSelector';
 import { type Header } from '../Scripts/useHeaders';
 
-
-const emit = defineEmits(['update-payload'])
-
-const url = ref('');
-const headers = ref<Header[]>([
-]);
-
 import { inject, type Ref } from 'vue'
 import type { NodeData } from '../../../../shared/types/canva';
 import type { Edge } from '../../../DraggableCanvas.vue';
 import { defineEmits } from 'vue'
 
 import { type ExtractConfig } from '../../Scripts/extractConfig';
+
+const emit = defineEmits(['update-payload'])
+
+const url = ref('');
+const headers = ref<Header[]>([]);
 
 const nodes = inject<Ref<NodeData[]>>('nodes')
 const edges = inject<Ref<Edge[]>>('edges')
@@ -86,8 +91,9 @@ const {
   hasRenderedOnce,
   isTransitioningOut,
   showContentSection,
+  formatError,
   triggerFormatLoading,
-  loadFormatAfterTransition
+  onTransitionComplete
 } = useFormatLoader();
 
 // Editing toggle
@@ -152,38 +158,38 @@ function setConfig(config: ExtractConfig) {
     { immediate: true, deep: true }
   );
 }
-const getFormat = () => {
-  triggerFormatLoading(url.value, headers.value);
 
-  // Watch for any changes in fieldTree and emit immediately
-  watch(
-    () => fieldTree.value,
-    (newTree) => {
-      if (newTree) {
-        console.log('[APIContent] Emitting fieldTree update:', toRaw(newTree));
-        emit('update-payload', { fieldTree: toRaw(newTree) });
-      }
-    },
-    { immediate: true, deep: true }
-  );
+const getFormat = async () => {
+  try {
+    await triggerFormatLoading(url.value, headers.value);
+  } catch (err: any) {
+    // Error handling is now done in useFormatLoader
+    console.error('Error loading format:', err);
+  }
 };
 
-
+// Watch for fieldTree changes (including resets to null due to errors)
 watch(
   () => fieldTree.value,
   (newTree) => {
     if (newTree) {
-      // Emit updated fieldTree whenever it changes
+      // Emit updated fieldTree whenever it changes 
       console.log('[APIContent] fieldTree updated:', toRaw(newTree));
       emit('update-payload', { fieldTree: toRaw(newTree) });
+    } else {
+      // Field tree was reset (likely due to an error)
+      console.log('[APIContent] fieldTree reset to null');
+      emit('update-payload', { fieldTree: [] });
     }
   },
   { immediate: true, deep: true }
 );
 
+const onContentLeft = () => {
+  // Call the onTransitionComplete handler to process pending format request
+  onTransitionComplete();
+};
 
-
-const onContentLeft = () => loadFormatAfterTransition(url.value, headers.value);
 </script>
 
 <style scoped>

@@ -8,7 +8,7 @@ export function simplifyJsonStructure(json: any): any {
     const result: Record<string, any> = {};
 
     for (const key in json) {
-      const value = json[key];
+      const value = json[key];  
 
       if (Array.isArray(value)) {
         result[key] = value.length > 0 ? [simplifyJsonStructure(value[0])] : [];
@@ -21,7 +21,6 @@ export function simplifyJsonStructure(json: any): any {
 
     return result;
   }
-
   return getType(json);
 }
 
@@ -38,6 +37,9 @@ type HeaderItem = {
   value: string;
   extra?: string;
 };
+
+
+
 
 export function formatHeaders(headers: HeaderItem[]): Record<string, string> {
   const newHeaders: Record<string, string> = {};

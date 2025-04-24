@@ -54,7 +54,6 @@ export class CreateConfig {
             Filters: config.Filters || []
           }
           break
-
         case 'load':
           loadConfig = config
           break
