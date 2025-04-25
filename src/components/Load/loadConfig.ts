@@ -16,7 +16,7 @@ export interface Table {
 }
 
 export interface TableMapping {
-  TargetColumn: string;
+  TargetField: string;
   SourceField: string;
 }
 
@@ -42,7 +42,7 @@ export function createLoadConfig(
     Tables: mappedTables.map((table) => ({
       TargetTable: table.name,
       Fields: table.fields.map((f) => ({
-        TargetColumn: f.name,
+        TargetField: f.name,
         SourceField: f.path,
       })),
     })),

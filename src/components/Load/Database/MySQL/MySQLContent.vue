@@ -74,9 +74,13 @@
         <label>Select Existing Table</label>
         <select v-model="selectedTable" class="input">
           <option disabled value="">-- Select Table --</option>
-          <option v-for="table in tables" :key="table" :value="table">{{ table }}</option>
+          <option v-for="table in tables" :key="table" :value="table"
+            :disabled="mappedTables.some(mapped => mapped.name === table)">
+            {{ table }} <span v-if="mappedTables.some(mapped => mapped.name === table)">(Mapped)</span>
+          </option>
         </select>
       </div>
+
 
       <div v-else>
         <label>New Table Name</label>
@@ -88,15 +92,12 @@
       <div v-if="!isCreatingNew && selectedTable" class="field-selector">
         <div v-for="column in filteredTableColumns" :key="column.columnName" class="checkbox-row">
           <label>
-            {{ column.columnName }} 
+            {{ column.columnName }}
             <span class="column-type">({{ column.dataType }})</span>
             <span v-if="column.isNullable === false" class="required-field">*</span>
           </label>
-          <select 
-            v-model="existingTableFieldMap[column.columnName]" 
-            class="input"
-            :class="{ 'invalid-mapping': isMappingInvalid(column, existingTableFieldMap[column.columnName]) }"
-          >
+          <select v-model="existingTableFieldMap[column.columnName]" class="input"
+            :class="{ 'invalid-mapping': isMappingInvalid(column, existingTableFieldMap[column.columnName]) }">
             <option disabled value="">-- Select Field --</option>
             <option v-for="field in getCompatibleFields(column)" :key="field.path" :value="field.path">
               {{ getDisplayName(field) }} ({{ field.dataType }})
@@ -150,6 +151,7 @@ import { type FieldNode } from '../../../../shared/scripts/jsonTreeBuilder'
 import { ConfigService } from '../../../../shared/scripts/Services/ConfigService'
 import { createLoadConfig, type LoadConfig } from '../../loadConfig'
 import type { DatabaseMetadata, DatabaseColumn } from '../../../../shared/types/databaseFormat'
+import type { Table } from '../../loadConfig'
 // Database options
 const databaseOptions = [
   { label: "MySQL", value: "mysql" },
@@ -244,26 +246,26 @@ function createFallbackField(path: string): MappedFieldNode {
 
 async function setConfig(config: LoadConfig) {
   const info = config.TargetInfo
-  const tables = config.Tables || []
+  const newTables = config.Tables as Table[]
 
   if (info?.$type) {
     databaseType.value = info.$type
   }
 
   if (info?.ConnectionString) {
-    const pairs = info.ConnectionString
+    const pairs = info.ConnectionString.toLowerCase()
       .split(';')
       .filter(Boolean)
       .map(p => p.split('='))
-    
-    const knownKeys = ['Server', 'Port', 'User', 'Password', 'Database']
+
+    const knownKeys = ['server', 'port', 'user', 'password', 'database']
     const configMap = Object.fromEntries(pairs)
 
-    host.value = configMap.Server || ''
-    port.value = Number(configMap.Port || 3306)
-    user.value = configMap['User'] || ''
-    password.value = configMap.Password || ''
-    database.value = configMap.Database || ''
+    host.value = configMap.server || ''
+    port.value = Number(configMap.port || 3306)
+    user.value = configMap['user'] || ''
+    password.value = configMap.password || ''
+    database.value = configMap.database || ''
 
     // Build `extra` from unknown keys
     extra.value = pairs
@@ -280,17 +282,16 @@ async function setConfig(config: LoadConfig) {
 
   await testConnection()
 
-  const stop = watch(() => fieldNodes.value.length, (len) => {
+  watch(() => fieldNodes.value.length, (len) => {
     if (len > 0) {
-      mappedTables.value = tables.map(t => ({
+      mappedTables.value = newTables.map(t => ({
         name: t.TargetTable,
-        fields: t.Fields.map(({ SourceField, TargetColumn }) => {
+        fields: t.Fields.map(({ SourceField, TargetField }) => {
           const found = findFieldByPath(SourceField)
           const baseField = found ? { ...found, path: SourceField } : createFallbackField(SourceField)
-          return { ...baseField, name: TargetColumn }
+          return { ...baseField, path: TargetField }
         })
       }))
-      stop()
     }
   }, { immediate: true })
 }
@@ -337,11 +338,36 @@ function getDisplayName(field: FieldNode | undefined): string {
 
 function findFieldByPath(path: string): FieldNode | undefined {
   const parts = path.split('.')
+
+  // For simple paths (no hierarchy), first try to match by the original name
+  // or by the transformed name if available
+  if (parts.length === 1) {
+    const fieldName = parts[0]
+
+    // First try to find by original name
+    const directMatch = fieldNodes.value.find(n => n.name === fieldName)
+    if (directMatch) return directMatch
+
+    // If not found by original name, try to find by transformed name
+    return fieldNodes.value.find(n =>
+      n.rules?.includes('change_name') &&
+      n.ruleValues?.[`${n.name}_change_name`] === fieldName
+    )
+  }
+
+  // For hierarchical paths, use the original logic
   let current: FieldNode | undefined
   let level = fieldNodes.value
   for (const part of parts) {
     current = level.find(n => n.name === part)
-    if (!current) return undefined
+    if (!current) {
+      // If not found by original name, try to find by transformed name
+      current = level.find(n =>
+        n.rules?.includes('change_name') &&
+        n.ruleValues?.[`${n.name}_change_name`] === part
+      )
+      if (!current) return undefined
+    }
     level = current.children || []
   }
   return current
@@ -362,41 +388,41 @@ function flattenTree(tree: FieldNode[]): MappedFieldNode[] {
 function isTypeCompatible(dbType: string, fieldType: string): boolean {
   dbType = dbType.toLowerCase()
   fieldType = fieldType.toLowerCase()
-  
+
   // Check if database type is numeric (int, decimal, float, etc)
   const isDbNumeric = /int|decimal|float|double|number|numeric/i.test(dbType)
-  
+
   // Check if field type is numeric
   const isFieldNumeric = /number|int|float|decimal|double/i.test(fieldType)
-  
+
   // Check if database type is string/text based
   const isDbText = /varchar|char|text|string/i.test(dbType)
-  
+
   // Check if field type is string/text based
   const isFieldText = /string|text/i.test(fieldType)
-  
+
   // Check if database type is date/time
   const isDbDateTime = /date|time|timestamp/i.test(dbType)
-  
+
   // Check if field type is date/time
   const isFieldDateTime = /date|time/i.test(fieldType)
-  
+
   // Special case: numbers can be assigned to string fields
   if (isDbText && isFieldNumeric) return true
-  
+
   // Basic compatibility check
-  return (isDbNumeric && isFieldNumeric) || 
-         (isDbText && isFieldText) ||
-         (isDbDateTime && isFieldDateTime) ||
-         dbType === fieldType
+  return (isDbNumeric && isFieldNumeric) ||
+    (isDbText && isFieldText) ||
+    (isDbDateTime && isFieldDateTime) ||
+    dbType === fieldType
 }
 
 function isMappingInvalid(column: DatabaseColumn, fieldPath: string): boolean {
   if (!fieldPath) return false
-  
+
   const field = findFieldByPath(fieldPath)
   if (!field || !field.dataType) return false
-  
+
   return !isTypeCompatible(column.dataType, field.dataType)
 }
 
@@ -408,7 +434,7 @@ function getCompatibleFields(column: DatabaseColumn): MappedFieldNode[] {
   return allFields.value.filter(field => {
     // If we don't have field type information, show all fields
     if (!field.dataType) return true
-    
+
     return isTypeCompatible(column.dataType, field.dataType)
   })
 }
@@ -420,7 +446,7 @@ const unmappedFields = computed(() => allFields.value.filter(f => !mappedPaths.v
 function confirmMapping() {
   const tableName = isCreatingNew.value ? newTableName.value : selectedTable.value
   if (!tableName) return
-  
+
   // Check if there are validation errors when using existing table
   if (!isCreatingNew.value && hasMappingErrors.value) {
     return
