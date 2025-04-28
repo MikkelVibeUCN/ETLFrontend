@@ -19,17 +19,12 @@
 
       <!-- ETL nodes -->
       <div v-for="(node, index) in nodes" :key="node.id" class="draggable" :data-id="node.id"
-  :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
-  <ETLNodeWrapper 
-    :ref="(el: any) => handleSetNodeRef(el, index)"
-    :type="node.type" 
-    :component-props="node"
-    @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
-    @dragstart="startNodeDrag(index, $event)" 
-    @start-connection="handleStartConnection"
-    @finish-connection="handleFinishConnection" 
-    @update-node-payload="handleNodePayload" />
-</div>
+        :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
+        <ETLNodeWrapper :ref="(el: any) => handleSetNodeRef(el, index)" :type="node.type" :component-props="node"
+          @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
+          @dragstart="startNodeDrag(index, $event)" @start-connection="handleStartConnection"
+          @finish-connection="handleFinishConnection" @update-node-payload="handleNodePayload" />
+      </div>
     </div>
 
     <ContextMenu v-if="contextMenu.visible" :x="contextMenu.x" :y="contextMenu.y" @add-node="handleAddNode" />
@@ -130,29 +125,29 @@ async function loadFromPipelineConfig(config: PipelineConfig) {
   async function addConfiguredNode(nodeType: string, nodeConfig: any) {
     await addNode(nodeType, contextMenu, nodes, nodeRefs);
     await nextTick();
-    
+
     const nodeIndex = nodes.value.length - 1;
     const node = nodes.value[nodeIndex];
     const nodeComponent = nodeComponents.value[nodeIndex];
-    
+
     if (nodeComponent) {
       nodeComponent.setConfig(nodeConfig);
     }
-    
+
     return {
       node,
       element: nodeRefs.value[nodeIndex],
       index: nodeIndex
     };
   }
-  
+
   // Helper function to position the next node
   function positionNextNode(fromNode: any, spacing = 100) {
     const nodeWidth = fromNode.element?.offsetWidth || 200;
     contextMenu.worldX = fromNode.node.x + nodeWidth + spacing;
     contextMenu.worldY = fromNode.node.y;
   }
-  
+
   // Helper function to connect nodes
   function connectNodes(fromNode: any, toNode: any) {
     handleStartConnection(fromNode.node.id);
@@ -162,21 +157,21 @@ async function loadFromPipelineConfig(config: PipelineConfig) {
   // Add extract node
   const sourceInfo = extractConfig.SourceInfo;
   const extractNodeRef = await addConfiguredNode(sourceInfo.$type, extractConfig);
-  
+
   // Add transform node
   positionNextNode(extractNodeRef);
   const transformNodeRef = await addConfiguredNode('rules', transformConfig);
-  
+
   // Connect extract to transform
   connectNodes(extractNodeRef, transformNodeRef);
-  
+
   // Add load node
   positionNextNode(transformNodeRef);
   const loadNodeRef = await addConfiguredNode('database', loadConfig);
-  
+
   // Connect transform to load
   connectNodes(transformNodeRef, loadNodeRef);
-  
+
   contextMenu.visible = false;
   updateContainerBounds();
 }
