@@ -78,7 +78,7 @@
           </div>
 
           <div v-if="node.children?.length" class="child-section">
-            <Rules :nodes="node.children" @update="emitChange" />
+            <Rules :nodes="node.children" @update="emitChangeAndBubble" />
           </div>
         </div>
       </div>
@@ -100,6 +100,11 @@ const newRule = ref<Record<string, string>>({})
 
 function emitChange() {
   emit('update', props.nodes)
+}
+
+function emitChangeAndBubble(updatedNodes: FieldNode[]) {
+  emitChange()
+  emit('update', updatedNodes)
 }
 
 function toggle(node: FieldNode) {

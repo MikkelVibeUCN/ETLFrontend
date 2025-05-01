@@ -56,14 +56,33 @@ export default {
   },
   methods: {
     onUpdate(updatedTree) {
-      // Update the fieldTree in the current node
-      this.componentProps.fieldTree = updatedTree
+      // Only update the isSelected property of existing nodes
+      const originalTree = this.componentProps.fieldTree || [];
 
-      // Emit update to downstream nodes via payload
+      const updatedTreeMap = new Map(
+        updatedTree.map(node => [node.id, node.isSelected])
+      );
+
+      const mergedTree = originalTree.map(node => {
+        const isSelected = updatedTreeMap.has(node.id)
+          ? updatedTreeMap.get(node.id)
+          : node.isSelected;
+
+        return {
+          ...node,
+          isSelected
+        };
+      });
+
+      // Save the updated tree
+      this.componentProps.fieldTree = mergedTree;
+
+      // Emit only the updated isSelected state
       this.$emit('update-payload', {
-        fieldTree: updatedTree
-      })
+        fieldTree: mergedTree
+      });
     },
+
     getConfig() {
       if (this.$refs.child && typeof this.$refs.child.getConfig === 'function') {
         return this.$refs.child.getConfig()
@@ -72,11 +91,6 @@ export default {
     },
     setConfig(config) {
       console.log('setConfig called', config);
-
-      if (this.isEmpty) {
-        console.log('Skipping setConfig: component is in empty state.');
-        return;
-      }
 
       let attempts = 0;
       const maxAttempts = 10;
@@ -91,7 +105,7 @@ export default {
           console.log(`Child not ready, retrying (${attempts}/${maxAttempts})...`);
           setTimeout(() => {
             this.$nextTick(checkChildExistence);
-          }, 100); 
+          }, 300);
         } else {
           console.log('setConfig failed: component not ready or max attempts reached');
         }

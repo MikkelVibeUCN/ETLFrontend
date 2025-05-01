@@ -253,10 +253,13 @@ async function setConfig(config: LoadConfig) {
   }
 
   if (info?.ConnectionString) {
-    const pairs = info.ConnectionString.toLowerCase()
-      .split(';')
-      .filter(Boolean)
-      .map(p => p.split('='))
+    const pairs = info.ConnectionString
+  .split(';')
+  .filter(Boolean)
+  .map(p => {
+    const [key, value] = p.split('=');
+    return [key.toLowerCase(), value];
+  });
 
     const knownKeys = ['server', 'port', 'user', 'password', 'database']
     const configMap = Object.fromEntries(pairs)

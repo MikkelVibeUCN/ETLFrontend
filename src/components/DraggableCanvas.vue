@@ -131,7 +131,7 @@ async function loadFromPipelineConfig(config: PipelineConfig) {
     const nodeComponent = nodeComponents.value[nodeIndex];
 
     if (nodeComponent) {
-      nodeComponent.setConfig(nodeConfig);
+      await nodeComponent.setConfig(nodeConfig);
     }
 
     return {

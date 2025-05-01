@@ -1,7 +1,10 @@
 <template>
     <div class="main-view">
       <nav class="navbar">
-        <router-link to="/" class="title">ECG-ETL</router-link>
+        <router-link to="/" class="title">
+          <img class="logo" src="/logo.png" />
+          FLUX-ETL
+        </router-link>
       </nav>
       <div class="content">
         <router-view />
@@ -30,10 +33,11 @@
   }
   
   .title {
-    margin: 0;
     font-size: 1.8rem;
     color: white;
     text-decoration: none;
+    align-items: center;
+    display: flex;
   }
   
   .content {
@@ -42,5 +46,11 @@
     flex-grow: 1; /* Take up the remaining available space */
     overflow: hidden; /* Prevent scrollbars in main view */
   }
+  .logo {
+    padding-right: 0.3rem;
+  width: 35px;
+  height: 35px;
+  
+}
   </style>
   

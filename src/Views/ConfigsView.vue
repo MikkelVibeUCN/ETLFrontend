@@ -37,9 +37,7 @@ onMounted(async () => {
 })
 
 function createNewConfig() {
-  var newConfig = createBlankConfig()
-  newConfig.Id = "new"
-  configs.value.push(newConfig)
+  router.push(`/pipeline/edit/new`)
 }
 
 async function runConfig(configId: string) {
