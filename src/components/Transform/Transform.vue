@@ -73,22 +73,30 @@ export default {
     setConfig(config) {
       console.log('setConfig called', config);
 
-      this.$nextTick(() => {
-        const checkChildExistence = () => {
-          if (this.$refs.child && typeof this.$refs.child.setConfig === 'function') {
-            console.log('Calling setConfig on child component');
-            this.$refs.child.setConfig(config);
-          } else {
-            console.log('Child component not ready, retrying...');
-            // Retry after another nextTick to ensure the child is properly mounted
-            setTimeout(() => {
-              this.$nextTick(checkChildExistence);
-            }, 0); // Retry with minimal delay
-          }
-        };
+      if (this.isEmpty) {
+        console.log('Skipping setConfig: component is in empty state.');
+        return;
+      }
 
-        checkChildExistence(); // Initial check
-      });
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      const checkChildExistence = () => {
+        const child = this.$refs.child;
+        if (child && typeof child.setConfig === 'function') {
+          console.log('Calling setConfig on child component');
+          child.setConfig(config);
+        } else if (attempts < maxAttempts && this.currentComponent) {
+          attempts++;
+          console.log(`Child not ready, retrying (${attempts}/${maxAttempts})...`);
+          setTimeout(() => {
+            this.$nextTick(checkChildExistence);
+          }, 100); 
+        } else {
+          console.log('setConfig failed: component not ready or max attempts reached');
+        }
+      };
+      this.$nextTick(checkChildExistence);
     }
   }
 }

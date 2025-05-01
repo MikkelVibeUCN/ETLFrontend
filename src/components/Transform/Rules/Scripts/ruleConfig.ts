@@ -30,7 +30,7 @@ const ruleConfig: RuleConfig = {
     change_name: {
       label: "Change Name",
       inputType: "text",
-      defaultValue: "$fieldName", // ✅ This special keyword will be replaced dynamically
+      defaultValue: "$fieldName",
     },
     equals: {
       label: "Equals",

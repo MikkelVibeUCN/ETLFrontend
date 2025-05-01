@@ -35,7 +35,7 @@
 import { ref, reactive, onMounted, watchEffect, watch, type Ref, type ComponentPublicInstance, type Component, toRaw } from 'vue'
 import ContextMenu from './ContextMenu.vue'
 import ETLNodeWrapper from './ETLNodeWrapper.vue'
-import { useCanvasControls } from './Extract/Scripts/useCanvasControls'
+import { useCanvasControls } from '../shared/scripts/useCanvasControls'
 import { addNode } from '../shared/scripts/utils/addNode'
 import type { NodeData, ContextMenuData } from '../shared/types/canva'
 import { provide } from 'vue'
