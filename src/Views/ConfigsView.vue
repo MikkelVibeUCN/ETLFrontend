@@ -6,12 +6,25 @@
     </div>
     <ul>
       <li v-for="config in configs" :key="config.Id" class="config-item">
-        <span>{{ config.Id }}</span>
-        <div class="button-group">
-          <button class="edit-btn" @click="editConfig(config.Id)">Edit</button>
-          <button class="run-btn" @click="runConfig(config.Id)">Run</button>
-        </div>
-      </li>
+  <span>{{ config.Id }}</span>
+  <div class="button-group">
+    <span
+      class="status-indicator"
+      :class="configStatuses[config.Id]"
+    >
+      {{ statusText(configStatuses[config.Id]) }}
+    </span>
+    <button class="edit-btn" @click="editConfig(config.Id)">Edit</button>
+    <button
+      class="run-btn"
+      @click="runConfig(config.Id)"
+      :disabled="configStatuses[config.Id] === 'running'"
+    >
+      Run
+    </button>
+  </div>
+</li>
+
 
     </ul>
   </div>
@@ -24,6 +37,10 @@ import { ConfigService } from '../shared/scripts/Services/ConfigService'
 import { type PipelineConfig, createBlankConfig } from '../shared/scripts/PipelineConfig'
 import { ExtractService } from '../shared/scripts/Services/ExtractService'
 const configs = ref<PipelineConfig[]>([])
+
+type ConfigStatus = 'idle' | 'running' | 'completed' | 'failed'
+
+const configStatuses = ref<Record<string, ConfigStatus>>({})
 
 const router = useRouter()
 
@@ -41,8 +58,31 @@ function createNewConfig() {
 }
 
 async function runConfig(configId: string) {
-  await ExtractService.startPipeline(configId);
+  configStatuses.value[configId] = 'running'
+  try {
+    await ExtractService.startPipeline(configId)
+    
+    configStatuses.value[configId] = 'completed'
+  } catch (err: any) {
+    if (err?.response?.status === 500) {
+      configStatuses.value[configId] = 'failed'
+    } else {
+      configStatuses.value[configId] = 'failed' 
+    }
+  }
 }
+function statusText(status?: ConfigStatus) {
+  switch (status) {
+    case 'running': return 'Running...'
+    case 'completed': return 'Completed'
+    case 'failed': return 'Failed'
+    default: return ''
+  }
+}
+
+
+
+
 
 </script>
 
@@ -52,10 +92,8 @@ async function runConfig(configId: string) {
   padding: 1.5rem 2rem;
   color: white;
   height: 100%;
-  /* Make sure the content is 100% of its container */
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   overflow-y: auto;
-  /* Allow scrolling */
 }
 
 .header {
@@ -107,7 +145,7 @@ button {
 }
 
 .edit-btn {
-  background-color: #ff9800; /* orange */
+  background-color: #ff9800; 
 }
 
 .edit-btn:hover {
@@ -115,11 +153,33 @@ button {
 }
 
 .run-btn {
-  background-color: #4caf50; /* green */
+  background-color: #4caf50; 
 }
 
 .run-btn:hover {
   background-color: #3d8b40;
+}
+.status-indicator {
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem; 
+  font-weight: bold;
+  text-align: center;
+}
+
+
+.status-indicator.running {
+  color: #fbc02d;
+}
+
+.status-indicator.completed {
+  color: #4caf50; 
+}
+
+.status-indicator.failed {
+  color: #f44336; 
 }
 
 </style>

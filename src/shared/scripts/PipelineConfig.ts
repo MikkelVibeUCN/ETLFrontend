@@ -4,6 +4,8 @@ import type { LoadConfig } from "../../components/Load/loadConfig";
 
 export interface PipelineConfig {
   Id: string;
+  Name: string,
+  Description: string;
   ExtractConfig: ExtractConfig;
   TransformConfig: TransformConfig;
   LoadConfig: LoadConfig;
@@ -12,6 +14,8 @@ export interface PipelineConfig {
 export function createBlankConfig(): PipelineConfig {
   return {
     Id: "",
+    Name: "",
+    Description: "",
     ExtractConfig: {
       SourceInfo: {
         $type: "",
