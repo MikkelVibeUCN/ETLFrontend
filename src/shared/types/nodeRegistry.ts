@@ -10,11 +10,11 @@ export interface NodeDefinition {
 
 // Flat list of node definitions (easier to use)
 export const nodeDefinitions: NodeDefinition[] = [
-  { version: 'API', title: 'Extract from API', icon: 'globe', group: 'extract', enabled: true },
-  { version: 'File', title: 'Extract from File', icon: 'file-alt', group: 'extract', enabled: false },
-  { version: 'Rules', title: 'Transform Rules', icon: 'cog', group: 'transform', enabled: true },
-  { version: 'Database', title: 'Load to Database', icon: 'database', group: 'load', enabled: true },
-  { version: 'File', title: 'Load to File', icon: 'file-alt', group: 'load', enabled: false },
+  { version: 'restapi', title: 'Extract from API', icon: 'globe', group: 'extract', enabled: true },
+  { version: 'file', title: 'Extract from File', icon: 'file-alt', group: 'extract', enabled: false },
+  { version: 'rules', title: 'Transform Rules', icon: 'cog', group: 'transform', enabled: true },
+  { version: 'database', title: 'Load to Database', icon: 'database', group: 'load', enabled: true },
+  { version: 'file', title: 'Load to File', icon: 'file-alt', group: 'load', enabled: false },
 ]
 
 // Lookup by version

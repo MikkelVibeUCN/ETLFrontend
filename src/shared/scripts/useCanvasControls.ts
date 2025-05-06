@@ -1,6 +1,6 @@
 import { ref, reactive, computed, type Ref, type ComputedRef } from 'vue'
-import { isOverlapping, getNodeRect } from '../../../shared/scripts/utils/geometry'
-import type { NodeData, ContextMenuData, PanState } from '../../../shared/types/canva'
+import { isOverlapping, getNodeRect } from './utils/geometry'
+import type { NodeData, ContextMenuData, PanState } from '../types/canva'
 
 
 export function useCanvasControls(

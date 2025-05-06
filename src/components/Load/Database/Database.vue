@@ -15,8 +15,8 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { databaseOptions } from '../loadConfig'
+import { ref, nextTick } from 'vue'
+import { databaseOptions, type LoadConfig } from '../loadConfig'
 import MySQLContent from './MySQL/MySQLContent.vue'
 
 import type { FieldNode } from '../../../shared/scripts/jsonTreeBuilder'
@@ -26,11 +26,30 @@ defineProps<{
 }>()
 
 defineExpose({
-  getConfig
+  getConfig,
+  setConfig
 })
 
 const selectedDb = ref('')
 const dbComponent = ref()
+
+function setConfig(config: LoadConfig) {
+  const dbType = config?.TargetInfo?.$type
+
+  if (!dbType || !componentMap[dbType]) {
+    console.log(`[Database] Unsupported or unknown database type: "${dbType}"`)
+    return
+  }
+
+  selectedDb.value = dbType
+
+  // wait for component to render, then pass config down
+  nextTick(() => {
+    if (dbComponent.value?.setConfig) {
+      dbComponent.value.setConfig(config)
+    }
+  })
+}
 
 
 function getConfig() {

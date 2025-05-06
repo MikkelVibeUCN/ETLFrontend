@@ -18,11 +18,9 @@
       </svg>
 
       <!-- ETL nodes -->
-      <div v-for="(node, index) in nodes" :key="node.id" class="draggable" 
-        :data-id="node.id" :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
-        <ETLNodeWrapper 
-        :ref="handleSetNodeRef(index)"
-          :type="node.type" :component-props="node"
+      <div v-for="(node, index) in nodes" :key="node.id" class="draggable" :data-id="node.id"
+        :style="{ transform: `translate(${node.x}px, ${node.y}px)` }">
+        <ETLNodeWrapper :ref="(el: any) => handleSetNodeRef(el, index)" :type="node.type" :component-props="node"
           @register-connectors="(id: number, refs: ConnectorRefs) => connectorMap.set(id, refs)"
           @dragstart="startNodeDrag(index, $event)" @start-connection="handleStartConnection"
           @finish-connection="handleFinishConnection" @update-node-payload="handleNodePayload" />
@@ -37,12 +35,13 @@
 import { ref, reactive, onMounted, watchEffect, watch, type Ref, type ComponentPublicInstance, type Component, toRaw } from 'vue'
 import ContextMenu from './ContextMenu.vue'
 import ETLNodeWrapper from './ETLNodeWrapper.vue'
-import { useCanvasControls } from './Extract/Scripts/useCanvasControls'
+import { useCanvasControls } from '../shared/scripts/useCanvasControls'
 import { addNode } from '../shared/scripts/utils/addNode'
 import type { NodeData, ContextMenuData } from '../shared/types/canva'
 import { provide } from 'vue'
 import { filterSelectedFields } from '../shared/scripts/utils/treeFilter'
 import { type ETLComponent, CreateConfig } from '../shared/scripts/createConfig'
+import type { PipelineConfig } from '../shared/scripts/PipelineConfig'
 
 const viewContainer = ref<HTMLElement | null>(null)
 const nodes = ref<NodeData[]>([])
@@ -68,35 +67,117 @@ export interface Edge {
 
 
 
-
-const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])
 const connectorMap = new Map<number, ConnectorRefs>()
 
-const nodeComponents: Ref<(Component | null)[]> = ref([])
+const nodeComponents: Ref<(InstanceType<typeof ETLNodeWrapper> | null)[]> = ref([]);
+const nodeRefs: Ref<(HTMLElement | null)[]> = ref([])
 
-function handleSetNodeRef(index: number) {
-  return (el: Element | ComponentPublicInstance | null) => {
-    nodeRefs.value[index] = el instanceof HTMLElement ? el : null
-
-    if (el && typeof el === 'object' && 'getConfig' in el && typeof (el as any).getConfig === 'function') {
-      nodeComponents.value[index] = el as ETLComponent
+// Update handleSetNodeRef to accept the el parameter
+function handleSetNodeRef(el: HTMLElement | ComponentPublicInstance | null, index: number) {
+  // Store the Vue component instance
+  if (el) {
+    if (el instanceof HTMLElement) {
+      nodeRefs.value[index] = el;
     } else {
-      nodeComponents.value[index] = null
+      // If it's a component instance, we need to access its $el property
+      const compEl = (el as any).$el;
+      nodeRefs.value[index] = compEl instanceof HTMLElement ? compEl : null;
     }
-  }
-}
-const exportPipeline = () => {
-  try {
-    const configBuilder = new CreateConfig(nodes.value, nodeComponents.value)
-    const config = configBuilder.build() // no ID passed
-    console.log('Pipeline config:', JSON.stringify(config, null, 2))
-  } catch (err) {
-    console.error('Failed to build config:', err)
+
+    // Store the component instance separately
+    nodeComponents.value[index] = el as any;
+  } else {
+    nodeRefs.value[index] = null;
+    nodeComponents.value[index] = null;
   }
 }
 
+
+
+const exportPipeline = (): PipelineConfig | null => {
+  try {
+    const configBuilder = new CreateConfig(nodes.value, nodeComponents.value);
+    const config = configBuilder.build();
+
+    return config as PipelineConfig;
+  } catch (err) {
+    console.error('Failed to build config:', err);
+    return null;
+  }
+}
+import { type ExtractConfig } from './Extract/Scripts/extractConfig'
+import { nextTick } from 'vue';
+import type { TransformConfig } from './Transform/transformConfig'
+import type { LoadConfig } from './Load/loadConfig'
+
+async function loadFromPipelineConfig(config: PipelineConfig) {
+  const extractConfig = config.ExtractConfig as ExtractConfig;
+  const transformConfig = config.TransformConfig as TransformConfig;
+  const loadConfig = config.LoadConfig as LoadConfig;
+
+  // Initialize position if needed
+  if (!contextMenu.worldX || !contextMenu.worldY) {
+    contextMenu.worldX = 100;
+    contextMenu.worldY = 100;
+  }
+
+  // Helper function to add a node and get its reference
+  async function addConfiguredNode(nodeType: string, nodeConfig: any) {
+    await addNode(nodeType, contextMenu, nodes, nodeRefs);
+    await nextTick();
+
+    const nodeIndex = nodes.value.length - 1;
+    const node = nodes.value[nodeIndex];
+    const nodeComponent = nodeComponents.value[nodeIndex];
+
+    if (nodeComponent) {
+      await nodeComponent.setConfig(nodeConfig);
+    }
+
+    return {
+      node,
+      element: nodeRefs.value[nodeIndex],
+      index: nodeIndex
+    };
+  }
+
+  // Helper function to position the next node
+  function positionNextNode(fromNode: any, spacing = 100) {
+    const nodeWidth = fromNode.element?.offsetWidth || 200;
+    contextMenu.worldX = fromNode.node.x + nodeWidth + spacing;
+    contextMenu.worldY = fromNode.node.y;
+  }
+
+  // Helper function to connect nodes
+  function connectNodes(fromNode: any, toNode: any) {
+    handleStartConnection(fromNode.node.id);
+    handleFinishConnection(toNode.node.id);
+  }
+
+  // Add extract node
+  const sourceInfo = extractConfig.SourceInfo;
+  const extractNodeRef = await addConfiguredNode(sourceInfo.$type, extractConfig);
+
+  // Add transform node
+  positionNextNode(extractNodeRef);
+  const transformNodeRef = await addConfiguredNode('rules', transformConfig);
+
+  // Connect extract to transform
+  connectNodes(extractNodeRef, transformNodeRef);
+
+  // Add load node
+  positionNextNode(transformNodeRef);
+  const loadNodeRef = await addConfiguredNode('database', loadConfig);
+
+  // Connect transform to load
+  connectNodes(transformNodeRef, loadNodeRef);
+
+  contextMenu.visible = false;
+  updateContainerBounds();
+}
 defineExpose({
-  exportPipeline
+  exportPipeline,
+  loadFromPipelineConfig
 })
 
 const contextMenu = reactive<ContextMenuData>({

@@ -4,12 +4,7 @@
       <DefaultContentTransform />
     </template>
     <template v-else>
-      <component
-        ref="child"
-        :is="currentComponent"
-        v-bind="resolvedProps"
-        @update="onUpdate"
-      />
+      <component ref="child" :is="currentComponent" v-bind="resolvedProps" @update="onUpdate" />
     </template>
   </div>
 </template>
@@ -37,14 +32,14 @@ export default {
   computed: {
     currentComponent() {
       switch (this.type) {
-        case 'Rules':
+        case 'rules':
           return Rules
         default:
           return null
       }
     },
     resolvedProps() {
-      if (this.type === 'Rules') {
+      if (this.type === 'rules') {
         return {
           nodes: this.componentProps.fieldTree || []
         }
@@ -53,27 +48,69 @@ export default {
     },
     isEmpty() {
       return (
-        this.type === 'Rules' &&
+        this.type === 'rules' &&
         (!this.componentProps.fieldTree || this.componentProps.fieldTree.length === 0)
       )
     },
-    
+
   },
   methods: {
     onUpdate(updatedTree) {
-      // Update the fieldTree in the current node
-      this.componentProps.fieldTree = updatedTree
+      // Only update the isSelected property of existing nodes
+      const originalTree = this.componentProps.fieldTree || [];
 
-      // Emit update to downstream nodes via payload
+      const updatedTreeMap = new Map(
+        updatedTree.map(node => [node.id, node.isSelected])
+      );
+
+      const mergedTree = originalTree.map(node => {
+        const isSelected = updatedTreeMap.has(node.id)
+          ? updatedTreeMap.get(node.id)
+          : node.isSelected;
+
+        return {
+          ...node,
+          isSelected
+        };
+      });
+
+      // Save the updated tree
+      this.componentProps.fieldTree = mergedTree;
+
+      // Emit only the updated isSelected state
       this.$emit('update-payload', {
-        fieldTree: updatedTree
-      })
+        fieldTree: mergedTree
+      });
     },
+
     getConfig() {
       if (this.$refs.child && typeof this.$refs.child.getConfig === 'function') {
         return this.$refs.child.getConfig()
       }
       return {}
+    },
+    setConfig(config) {
+      console.log('setConfig called', config);
+
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      const checkChildExistence = () => {
+        const child = this.$refs.child;
+        if (child && typeof child.setConfig === 'function') {
+          console.log('Calling setConfig on child component');
+          child.setConfig(config);
+        } else if (attempts < maxAttempts && this.currentComponent) {
+          attempts++;
+          console.log(`Child not ready, retrying (${attempts}/${maxAttempts})...`);
+          setTimeout(() => {
+            this.$nextTick(checkChildExistence);
+          }, 300);
+        } else {
+          console.log('setConfig failed: component not ready or max attempts reached');
+        }
+      };
+      this.$nextTick(checkChildExistence);
     }
   }
 }
@@ -84,6 +121,7 @@ export default {
   min-width: 500px;
   width: auto;
 }
+
 .empty-state {
   padding: 2rem;
   text-align: center;

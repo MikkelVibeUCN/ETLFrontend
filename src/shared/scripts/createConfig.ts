@@ -2,6 +2,10 @@
 
 import type { NodeData } from "../types/canva"
 import { type Component } from "vue"
+import type { ExtractConfig } from "../../components/Extract/Scripts/extractConfig"
+import type { TransformConfig } from "../../components/Transform/transformConfig"
+import type { LoadConfig } from "../../components/Load/loadConfig"
+import type { PipelineConfig } from "./PipelineConfig"
 
 export interface ETLComponent {
   getConfig: () => any
@@ -21,11 +25,11 @@ export class CreateConfig {
   }
 
   build(pipelineId = '') {
-    let sourceInfo: any = null
-    let extractConfig: any = null
-    let transformConfig: any = null
-    let loadTargetConfig: any = null
+    let extractConfig: ExtractConfig | null = null
+    let transformConfig: TransformConfig | null = null
+    let loadConfig: LoadConfig | null = null
 
+    // Iterate over the nodes and components
     for (let i = 0; i < this.nodes.length; i++) {
       const node = this.nodes[i]
       const component = this.components[i]
@@ -34,13 +38,14 @@ export class CreateConfig {
 
       const config = component.getConfig()
 
+      // Populate the correct config object based on the node group
       switch (node.group) {
         case 'extract':
           extractConfig = {
+            SourceInfo: config.SourceInfo,  // Extract the SourceInfo here
             Fields: config.Fields || [],
             Filters: config.Filters || []
           }
-          sourceInfo = config.SourceInfo
           break
 
         case 'transform':
@@ -49,23 +54,23 @@ export class CreateConfig {
             Filters: config.Filters || []
           }
           break
-
         case 'load':
-          loadTargetConfig = config.LoadTargetConfig
+          loadConfig = config
           break
       }
     }
 
-    if (!sourceInfo || !extractConfig || !transformConfig || !loadTargetConfig) {
+    // Throw an error if any part of the pipeline configuration is missing
+    if (!extractConfig || !transformConfig || !loadConfig) {
       throw new Error('Missing part of the pipeline config (extract, transform, or load)')
     }
 
+    // Return the complete pipeline configuration
     return {
       Id: pipelineId,
-      SourceInfo: sourceInfo,
       ExtractConfig: extractConfig,
       TransformConfig: transformConfig,
-      LoadTargetConfig: loadTargetConfig
-    }
+      LoadConfig: loadConfig
+    } as PipelineConfig
   }
 }
