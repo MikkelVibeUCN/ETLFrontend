@@ -1,3 +1,7 @@
+import { extractNodeDefinitions } from "../../components/Extract/Scripts/ExtractTypesConfig"
+import { loadNodeDefinitions } from "../../components/Load/LoadTypesConfig"
+import { transformNodeDefinitions } from "../../components/Transform/TranformTypesConfig"
+
 export type NodeGroup = 'extract' | 'transform' | 'load'
 
 export interface NodeDefinition {
@@ -10,13 +14,10 @@ export interface NodeDefinition {
 
 // Flat list of node definitions (easier to use)
 export const nodeDefinitions: NodeDefinition[] = [
-  { version: 'restapi', title: 'Extract from API', icon: 'globe', group: 'extract', enabled: true },
-  { version: 'file', title: 'Extract from File', icon: 'file-alt', group: 'extract', enabled: false },
-  { version: 'rules', title: 'Transform Rules', icon: 'cog', group: 'transform', enabled: true },
-  { version: 'database', title: 'Load to Database', icon: 'database', group: 'load', enabled: true },
-  { version: 'file', title: 'Load to File', icon: 'file-alt', group: 'load', enabled: false },
-]
-
+  ...extractNodeDefinitions,
+  ...transformNodeDefinitions,
+  ...loadNodeDefinitions,
+];
 // Lookup by version
 export function findNodeDefinition(version: string): NodeDefinition | undefined {
   return nodeDefinitions.find(def => def.version === version)

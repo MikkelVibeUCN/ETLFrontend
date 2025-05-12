@@ -6,6 +6,7 @@
 
 <script>
 import APIContent from './API/Vue/APIContent.vue'
+import { getExtractComponent } from './Scripts/ExtractTypesConfig'
 
 export default {
   name: 'Extract',
@@ -24,12 +25,7 @@ export default {
   },
   computed: {
     currentComponent() {
-      switch (this.type) {
-        case 'restapi':
-          return 'APIContent';
-        default:
-          return null;
-      }
+      return getExtractComponent(this.type)
     }
   },
   methods: {

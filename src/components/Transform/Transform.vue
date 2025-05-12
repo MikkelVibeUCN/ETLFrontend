@@ -12,6 +12,7 @@
 <script>
 import Rules from './Rules/Vue/Rules.vue'
 import DefaultContentTransform from './DefaultContentTransform.vue'
+import { getTranformComponent } from './TranformTypesConfig'
 
 export default {
   name: 'Transform',
@@ -31,12 +32,7 @@ export default {
   },
   computed: {
     currentComponent() {
-      switch (this.type) {
-        case 'rules':
-          return Rules
-        default:
-          return null
-      }
+      return getTranformComponent(this.type);
     },
     resolvedProps() {
       if (this.type === 'rules') {
@@ -48,8 +44,7 @@ export default {
     },
     isEmpty() {
       return (
-        this.type === 'rules' &&
-        (!this.componentProps.fieldTree || this.componentProps.fieldTree.length === 0)
+        !this.componentProps.fieldTree || this.componentProps.fieldTree.length === 0
       )
     },
 

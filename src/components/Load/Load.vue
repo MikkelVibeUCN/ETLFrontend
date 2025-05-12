@@ -6,6 +6,7 @@
 
 <script>
 import Database from './Database/Database.vue'
+import { getLoadComponent } from './LoadTypesConfig'
 
 
 export default {
@@ -25,12 +26,7 @@ export default {
   },
   computed: {
     currentComponent() {
-      switch (this.type) {
-        case 'database':
-          return Database
-        default:
-          return null
-      }
+      return getLoadComponent(this.type);
     },
     resolvedProps() {
       switch (this.type) {

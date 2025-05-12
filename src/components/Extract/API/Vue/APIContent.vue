@@ -102,7 +102,7 @@ const toggleFieldEditing = () => {
   editingFields.value = !editingFields.value;
 };
 
-function setConfig(config: ExtractConfig) {
+async function setConfig(config: ExtractConfig) {
   if (!config) return;
 
   url.value = config.SourceInfo?.Url || '';
@@ -123,7 +123,7 @@ function setConfig(config: ExtractConfig) {
   const selectedFields = config.Fields || [];
 
   // Trigger getFormat (loads the fieldTree asynchronously)
-  triggerFormatLoading(url.value, headers.value);
+  await triggerFormatLoading(url.value, headers.value);
 
   // Watch for fieldTree to load, then apply selected fields
   const stopWatch = watch(

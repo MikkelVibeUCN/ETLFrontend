@@ -1,17 +1,14 @@
 import { computed } from 'vue';
 import rawHeaderConfig from '../HeaderConfig.json';
 
-
 export interface Header {
   key: string;
   value: string;
   extra?: string;
 }
 
-// ✅ Define item shape — one key only, string[]
 export type HeaderConfigItem = { [key: string]: string[] };
 
-// ✅ Cast safely from unknown
 const headerConfig = rawHeaderConfig as unknown as HeaderConfigItem[];
 
 export function useHeaders(headers: Header[]) {
