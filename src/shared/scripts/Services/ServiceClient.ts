@@ -34,11 +34,9 @@ export class ApiError extends Error {
     
     if (this.responseBody) {
       try {
-        // Try to pretty format JSON responses
         const parsed = JSON.parse(this.responseBody);
         msg += `\nResponse: ${JSON.stringify(parsed, null, 2)}`;
       } catch {
-        // If not JSON, include as plain text
         msg += `\nResponse: ${this.responseBody}`;
       }
     }

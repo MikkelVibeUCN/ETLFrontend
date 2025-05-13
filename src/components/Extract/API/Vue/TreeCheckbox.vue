@@ -31,8 +31,7 @@
       </li>
     </ul>
   </template>
-  
-  
+
   <script lang="ts">
   import { defineComponent, type PropType } from 'vue';
   import type { FieldNode } from '../../../../shared/scripts/jsonTreeBuilder';
@@ -82,4 +81,3 @@
     pointer-events: none;
   }
   </style>
-  

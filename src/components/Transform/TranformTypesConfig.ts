@@ -1,20 +1,24 @@
-import type { NodeDefinition } from "../../shared/types/nodeRegistry";
+import Rules from './Rules/Vue/Rules.vue'
+import type { NodeModule } from '../../shared/types/nodeModule'
 
-export function getTranformComponent(type: string) {
-  switch (type) {
-    case "rules":
-      return "Rules";
-    default:
-      return null;
-  }
-}
+const group = 'transform'
 
-export const transformNodeDefinitions: NodeDefinition[] = [
-  {
-    version: "rules",
-    title: "Transform Rules",
-    icon: "cog",
-    group: "transform",
-    enabled: true,
+export const transformNodeModule: NodeModule = {
+  getComponent: (type: string) => {
+    switch (type) {
+      case 'rules':
+        return Rules
+      default:
+        return null
+    }
   },
-];
+  nodeDefinitions: [
+    {
+      version: 'rules',
+      title: 'Transform Rules',
+      icon: 'cog',
+      group,
+      enabled: true,
+    },
+  ],
+}

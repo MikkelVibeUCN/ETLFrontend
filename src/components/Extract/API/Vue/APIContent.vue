@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, toRaw, watch } from 'vue';
+import { ref, toRaw, watch, onMounted } from 'vue';
 import URLInput from '../Vue/URLInput.vue';
 import HeaderList from '../Vue/HeaderList.vue';
 import FormatResult from '../Vue/FormatResult.vue';
@@ -39,10 +39,11 @@ import { defineEmits } from 'vue'
 
 import { type ExtractConfig } from '../../Scripts/extractConfig';
 
-const emit = defineEmits(['update-payload'])
+const emit = defineEmits(['update-payload', 'component-ready'])
 
 const url = ref('');
 const headers = ref<Header[]>([]);
+let pendingSelectedFields: string[] = [];
 
 const nodes = inject<Ref<NodeData[]>>('nodes')
 const edges = inject<Ref<Edge[]>>('edges')
@@ -102,7 +103,9 @@ const toggleFieldEditing = () => {
   editingFields.value = !editingFields.value;
 };
 
+// Fixed function to avoid TDZ issue
 async function setConfig(config: ExtractConfig) {
+  console.log('[APIContent] setConfig called with:', config);
   if (!config) return;
 
   url.value = config.SourceInfo?.Url || '';
@@ -120,76 +123,84 @@ async function setConfig(config: ExtractConfig) {
     }
   });
 
-  const selectedFields = config.Fields || [];
-
-  // Trigger getFormat (loads the fieldTree asynchronously)
+  // Store selected fields for later use
+  pendingSelectedFields = config.Fields || [];
+  
+  console.log('[APIContent] Stored pending fields:', pendingSelectedFields);
+  
+  // Trigger format loading
   await triggerFormatLoading(url.value, headers.value);
-
-  // Watch for fieldTree to load, then apply selected fields
-  const stopWatch = watch(
-    () => fieldTree.value,
-    (tree) => {
-      if (tree && tree.length > 0 && selectedFields.length > 0) {
-        // Apply selected fields
-        fieldTree.value = tree.map(field => {
-          const isObject = field.children && field.children.length > 0;
-          const updatedField = {
-            ...field,
-            selected: selectedFields.includes(field.name)
-          };
-
-          // If it's an object, uncheck all children
-          if (isObject && field.children) {
-            updatedField.children = field.children.map(child => ({
-              ...child,
-              selected: false // Uncheck all children
-            }));
-          }
-
-          return updatedField;
-        });
-
-        // Emit updated fieldTree to parent
-        emit('update-payload', { fieldTree: toRaw(fieldTree.value) });
-
-        stopWatch(); // Stop watching after the first successful update
-      }
-    },
-    { immediate: true, deep: true }
-  );
 }
+
+// Create a separate watcher function to avoid temporal dead zone issues
+let selectedFieldsWatcher: ReturnType<typeof watch> | null = null;
+
+// Watch fieldTree changes and apply selected fields when available
+watch(
+  () => fieldTree.value,
+  (tree) => {
+    if (tree && tree.length > 0 && pendingSelectedFields.length > 0) {
+      console.log('[APIContent] FieldTree loaded, applying pending fields:', pendingSelectedFields);
+      
+      fieldTree.value = tree.map(field => {
+        const isObject = field.children && field.children.length > 0;
+        const updatedField = {
+          ...field,
+          selected: pendingSelectedFields.includes(field.name)
+        };
+
+        if (isObject && field.children) {
+          updatedField.children = field.children.map(child => ({
+            ...child,
+            selected: false // Uncheck all children
+          }));
+        }
+
+        return updatedField;
+      });
+
+      // Clear pending fields after applying
+      pendingSelectedFields = [];
+      
+      // Emit updated fieldTree to parent
+      emit('update-payload', { fieldTree: toRaw(fieldTree.value) });
+    }
+  },
+  { deep: true }
+);
 
 const getFormat = async () => {
   try {
     await triggerFormatLoading(url.value, headers.value);
   } catch (err: any) {
-    // Error handling is now done in useFormatLoader
     console.error('Error loading format:', err);
   }
 };
 
-// Watch for fieldTree changes (including resets to null due to errors)
+// General watcher for fieldTree updates
 watch(
   () => fieldTree.value,
   (newTree) => {
     if (newTree) {
-      // Emit updated fieldTree whenever it changes 
       console.log('[APIContent] fieldTree updated:', toRaw(newTree));
       emit('update-payload', { fieldTree: toRaw(newTree) });
     } else {
-      // Field tree was reset (likely due to an error)
       console.log('[APIContent] fieldTree reset to null');
       emit('update-payload', { fieldTree: [] });
     }
   },
-  { immediate: true, deep: true }
+  { deep: true }
 );
 
 const onContentLeft = () => {
-  // Call the onTransitionComplete handler to process pending format request
   onTransitionComplete();
 };
 
+// Signal that component is ready when mounted
+onMounted(() => {
+  console.log('[APIContent] Component mounted and ready');
+  emit('component-ready');
+});
 </script>
 
 <style scoped>

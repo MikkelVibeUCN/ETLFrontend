@@ -1,19 +1,15 @@
 <template>
   <div class="load-container">
-    <component ref="child" :is="currentComponent" v-bind="resolvedProps" />
+    <component ref="child" :is="currentComponent" v-bind="resolvedProps" :key="type"/>
   </div>
 </template>
 
 <script>
-import Database from './Database/Database.vue'
-import { getLoadComponent } from './LoadTypesConfig'
+import { loadNodeModule } from './LoadTypesConfig';
 
 
 export default {
   name: 'load',
-  components: {
-    Database
-  },
   props: {
     type: {
       type: String,
@@ -26,7 +22,7 @@ export default {
   },
   computed: {
     currentComponent() {
-      return getLoadComponent(this.type);
+      return loadNodeModule.getComponent(this.type);
     },
     resolvedProps() {
       switch (this.type) {

@@ -1,27 +1,31 @@
-import type { NodeDefinition } from "../../../shared/types/nodeRegistry";
+import type { NodeModule } from "../../../shared/types/nodeModule";
+import APIContent from "../API/Vue/APIContent.vue";
 
-export function getExtractComponent(type: string) {
-  switch (type) {
-    case "restapi":
-      return "APIContent";
-    default:
-      return null;
-  }
-}
+const group = "extract";
 
-export const extractNodeDefinitions: NodeDefinition[] = [
-  {
-    version: "restapi",
-    title: "Extract from API",
-    icon: "globe",
-    group: "extract",
-    enabled: true,
+export const extractNodeModule: NodeModule = {
+  getComponent: (type: string) => {
+    switch (type) {
+      case "restapi":
+        return APIContent;
+      default:
+        return null;
+    }
   },
-  {
-    version: "file",
-    title: "Extract from File",
-    icon: "file-alt",
-    group: "extract",
-    enabled: false,
-  },
-];
+  nodeDefinitions: [
+    {
+      version: "restapi",
+      title: "Extract from API",
+      icon: "globe",
+      group,
+      enabled: true,
+    },
+    {
+      version: "file",
+      title: "Extract from File",
+      icon: "file-alt",
+      group,
+      enabled: false,
+    },
+  ],
+};

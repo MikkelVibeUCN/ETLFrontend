@@ -4,20 +4,18 @@
       <DefaultContentTransform />
     </template>
     <template v-else>
-      <component ref="child" :is="currentComponent" v-bind="resolvedProps" @update="onUpdate" />
+      <component ref="child" :is="currentComponent" v-bind="resolvedProps" @update="onUpdate" :key="type"/>
     </template>
   </div>
 </template>
 
 <script>
-import Rules from './Rules/Vue/Rules.vue'
 import DefaultContentTransform from './DefaultContentTransform.vue'
-import { getTranformComponent } from './TranformTypesConfig'
+import { transformNodeModule } from './TranformTypesConfig';
 
 export default {
   name: 'Transform',
   components: {
-    Rules,
     DefaultContentTransform
   },
   props: {
@@ -32,7 +30,7 @@ export default {
   },
   computed: {
     currentComponent() {
-      return getTranformComponent(this.type);
+      return transformNodeModule.getComponent(this.type)
     },
     resolvedProps() {
       if (this.type === 'rules') {
