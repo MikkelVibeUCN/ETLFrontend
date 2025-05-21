@@ -1,35 +1,63 @@
-FluxETL: Low-code pipeline builder
 
-Setup Guide
+# FluxETL: Low-code Pipeline Builder
 
-1. Install Vite & Vue Globally
-    ```pm install -g vite vue```
+## Setup Guide
 
-2. Install TypeScript
-    ```npm install typescript --save-dev```
-Or global
-    ```npm install -g typescript```
+### 1. Install Vite & Vue Globally
 
-3. Run the Dev Server
-    ```npm run dev```
+```sh
+npm install -g vite vue
+```
+
+### 2. Install TypeScript
+
+Install locally:
+
+```sh
+npm install typescript --save-dev
+```
+
+Or globally:
+
+```sh
+npm install -g typescript
+```
+
+### 3. Run the Dev Server
+
+```sh
+npm run dev
+```
+
+### 4. Start Docker Services
 
 From the ETL-Project root directory (make sure Docker Desktop is running):
 
-    docker compose -f docker-compose.yml up -d
+```sh
+docker compose -f docker-compose.yml up -d
+```
 
-Wait 5-10 seconds
+Wait 5–10 seconds.
 
-Create a topic
+### 5. Create a Topic
 
-    .\create-topics.ps1
-    
-Optional: Start the test source API (you can use any API that returngs JSON, the test API just makes it easier)
+```sh
+.\create-topics.ps1
+```
 
-    TestSourceApi
+### 6. (Optional) Start the Test Source API
 
-Now run the backend
+You can use any API that returns JSON. The test API just makes it easier:
 
-- ExtractAPI
-- Transform
-- Load
-- ETLConfigAPI
+```sh
+TestSourceApi
+```
+
+### 7. Run Backend Services
+
+Start the following backend services:
+
+- `ExtractAPI`
+- `Transform`
+- `Load`
+- `ETLConfigAPI`
