@@ -80,10 +80,6 @@ function statusText(status?: ConfigStatus) {
   }
 }
 
-
-
-
-
 </script>
 
 <style scoped>

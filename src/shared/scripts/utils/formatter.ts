@@ -38,9 +38,6 @@ type HeaderItem = {
   extra?: string;
 };
 
-
-
-
 export function formatHeaders(headers: HeaderItem[]): Record<string, string> {
   const newHeaders: Record<string, string> = {};
 

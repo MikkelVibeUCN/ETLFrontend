@@ -12,10 +12,6 @@
     </div>
   </template>
   
-  <script setup>
-  // No logic needed here — routing handles switching views
-  </script>
-  
   <style scoped>
   .main-view {
     display: flex;
@@ -29,7 +25,7 @@
     color: white;
     padding: 1rem;
     border-bottom: 2px solid #333;
-    flex-shrink: 0; /* Prevent the navbar from shrinking */
+    flex-shrink: 0; 
   }
   
   .title {
@@ -43,8 +39,8 @@
   .content {
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Take up the remaining available space */
-    overflow: hidden; /* Prevent scrollbars in main view */
+    flex-grow: 1;
+    overflow: hidden;
   }
   .logo {
     padding-right: 0.3rem;

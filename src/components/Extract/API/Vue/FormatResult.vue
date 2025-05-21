@@ -45,15 +45,12 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:jsonFormat']);
 
-// Create a two-way binding computed for v-model
 const jsonFormatModel = computed({
   get: () => props.jsonFormat,
   set: (val: string) => emit('update:jsonFormat', val)
 });
 
-// Handle transition completion
 const handleAfterLeave = () => {
-  // Call the onLeave handler from parent
   props.onLeave();
 };
 </script>
@@ -104,7 +101,6 @@ textarea {
   margin-bottom: 0.5rem;
 }
 
-/* Error styling */
 .error-container {
   width: 100%;
 }

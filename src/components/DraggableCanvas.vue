@@ -65,8 +65,6 @@ export interface Edge {
   end: { x: number; y: number }
 }
 
-
-
 const connectorMap = new Map<number, ConnectorRefs>()
 
 const nodeComponents: Ref<(InstanceType<typeof ETLNodeWrapper> | null)[]> = ref([]);
@@ -92,8 +90,6 @@ function handleSetNodeRef(el: HTMLElement | ComponentPublicInstance | null, inde
   }
 }
 
-
-
 const exportPipeline = (): PipelineConfig | null => {
   try {
     const configBuilder = new CreateConfig(nodes.value, nodeComponents.value);
@@ -115,13 +111,11 @@ async function loadFromPipelineConfig(config: PipelineConfig) {
   const transformConfig = config.TransformConfig as TransformConfig;
   const loadConfig = config.LoadConfig as LoadConfig;
 
-  // Initialize position if needed
   if (!contextMenu.worldX || !contextMenu.worldY) {
     contextMenu.worldX = 100;
     contextMenu.worldY = 100;
   }
 
-  // Helper function to add a node and get its reference
   async function addConfiguredNode(nodeType: string, nodeConfig: any) {
     await addNode(nodeType, contextMenu, nodes, nodeRefs);
     await nextTick();
@@ -141,35 +135,28 @@ async function loadFromPipelineConfig(config: PipelineConfig) {
     };
   }
 
-  // Helper function to position the next node
   function positionNextNode(fromNode: any, spacing = 100) {
     const nodeWidth = fromNode.element?.offsetWidth || 200;
     contextMenu.worldX = fromNode.node.x + nodeWidth + spacing;
     contextMenu.worldY = fromNode.node.y;
   }
 
-  // Helper function to connect nodes
   function connectNodes(fromNode: any, toNode: any) {
     handleStartConnection(fromNode.node.id);
     handleFinishConnection(toNode.node.id);
   }
 
-  // Add extract node
   const sourceInfo = extractConfig.SourceInfo;
   const extractNodeRef = await addConfiguredNode(sourceInfo.$type, extractConfig);
 
-  // Add transform node
   positionNextNode(extractNodeRef);
   const transformNodeRef = await addConfiguredNode('rules', transformConfig);
 
-  // Connect extract to transform
   connectNodes(extractNodeRef, transformNodeRef);
 
-  // Add load node
   positionNextNode(transformNodeRef);
   const loadNodeRef = await addConfiguredNode('database', loadConfig);
 
-  // Connect transform to load
   connectNodes(transformNodeRef, loadNodeRef);
 
   contextMenu.visible = false;
@@ -207,7 +194,6 @@ function updateContainerBounds() {
   let maxX = 0
   let maxY = 0
 
-  // 🧱 Include all nodes
   for (const node of nodes.value) {
     const ref = nodeRefs.value.find(n => n?.dataset.id === String(node.id))
     const width = ref?.offsetWidth || 100
@@ -217,13 +203,11 @@ function updateContainerBounds() {
     maxY = Math.max(maxY, node.y + height)
   }
 
-  // 🧷 Include all edge endpoints
   for (const edge of edges.value) {
     maxX = Math.max(maxX, edge.start.x, edge.end.x)
     maxY = Math.max(maxY, edge.start.y, edge.end.y)
   }
 
-  // 🎯 Include mouse position if a connection is being drawn
   if (connectionStart.value) {
     maxX = Math.max(maxX, mouse.x)
     maxY = Math.max(maxY, mouse.y)
@@ -282,7 +266,6 @@ function handleFinishConnection(nodeId: number) {
     end: { x: endX, y: endY }
   })
 
-  // ⚡ Transfer fieldTree from Extract to Transform if available
   const fromNode = nodes.value.find(n => n.id === connectionStart.value!.nodeId)
   const toNode = nodes.value.find(n => n.id === nodeId)
 
@@ -292,9 +275,6 @@ function handleFinishConnection(nodeId: number) {
       const rawTree = toRaw(fromNode.fieldTree)
       const filteredTree = filterSelectedFields(rawTree)
       toNode.fieldTree = filteredTree
-    } else {
-      // If not yet available, wait for "getFormat" to populate it
-      // Option 1: Watch later OR store pending links
     }
   }
   if (fromNode?.group === 'transform' && toNode?.group === 'load') {
@@ -377,7 +357,6 @@ onMounted(() => {
   requestAnimationFrame(animateEdgeUpdates)
 })
 
-// 🔍 Recalculate bounds after zoom
 watch(scale, () => {
   updateContainerBounds()
 })

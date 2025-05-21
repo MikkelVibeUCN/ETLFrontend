@@ -268,7 +268,7 @@ function setConfig(config: TransformConfig) {
       const hasRules = (mapByField.get(node.name)?.length || 0) > 0 || (filterByField.get(node.name)?.length || 0) > 0;
       node._expanded = hasRules;
 
-      // 🧠 1. Apply Mapping (e.g. "change_name" rule)
+      // Apply Mapping (e.g. "change_name" rule)
       const mappings = mapByField.get(node.name) || []
       for (const targetField of mappings) {
         const ruleKey = Object.entries(ruleDefs).find(
@@ -279,7 +279,7 @@ function setConfig(config: TransformConfig) {
         node.ruleValues[`${node.name}_${ruleKey}`] = targetField
       }
 
-      // 🧠 2. Apply Filters (e.g. "equals", "greater_than")
+      // Apply Filters (e.g. "equals", "greater_than")
       const filters = filterByField.get(node.name) || []
       for (const { operator, value } of filters) {
         if (!ruleDefs[operator]) continue
@@ -288,7 +288,7 @@ function setConfig(config: TransformConfig) {
         node.ruleValues[`${node.name}_${operator}`] = value
       }
 
-      // 🔁 Recurse into children
+      // Recurse into children
       if (node.children?.length) {
         applyRules(node.children)
       }

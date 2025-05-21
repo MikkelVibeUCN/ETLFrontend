@@ -392,28 +392,20 @@ function isTypeCompatible(dbType: string, fieldType: string): boolean {
   dbType = dbType.toLowerCase()
   fieldType = fieldType.toLowerCase()
 
-  // Check if database type is numeric (int, decimal, float, etc)
   const isDbNumeric = /int|decimal|float|double|number|numeric/i.test(dbType)
 
-  // Check if field type is numeric
   const isFieldNumeric = /number|int|float|decimal|double/i.test(fieldType)
 
-  // Check if database type is string/text based
   const isDbText = /varchar|char|text|string/i.test(dbType)
 
-  // Check if field type is string/text based
   const isFieldText = /string|text/i.test(fieldType)
 
-  // Check if database type is date/time
   const isDbDateTime = /date|time|timestamp/i.test(dbType)
 
-  // Check if field type is date/time
   const isFieldDateTime = /date|time/i.test(fieldType)
 
-  // Special case: numbers can be assigned to string fields
   if (isDbText && isFieldNumeric) return true
 
-  // Basic compatibility check
   return (isDbNumeric && isFieldNumeric) ||
     (isDbText && isFieldText) ||
     (isDbDateTime && isFieldDateTime) ||
@@ -435,7 +427,6 @@ function isRequiredColumnUnmapped(column: DatabaseColumn): boolean {
 
 function getCompatibleFields(column: DatabaseColumn): MappedFieldNode[] {
   return allFields.value.filter(field => {
-    // If we don't have field type information, show all fields
     if (!field.dataType) return true
 
     return isTypeCompatible(column.dataType, field.dataType)

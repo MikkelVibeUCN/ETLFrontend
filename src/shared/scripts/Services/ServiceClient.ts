@@ -161,7 +161,6 @@ async function request<T = any>(baseUrl: string, config: RequestConfig, method: 
       
       return data;
     }
-    
     // Handle non-JSON responses
     const textData = await response.text();
     return textData as unknown as T;

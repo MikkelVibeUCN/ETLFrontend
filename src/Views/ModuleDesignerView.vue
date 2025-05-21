@@ -202,36 +202,30 @@ export default defineComponent({
       this.pendingConfig.Id = id;
       this.closeIdModal();
       
-      // Continue with save process
       this.checkExistingAndSave();
     },
     
     discard() {
       console.log("Discard clicked")
-      // Implement discard functionality
     },
     
     showTemplates() {
       console.log("Show templates")
-      // Implement templates functionality
     },
     
     showHelp() {
       console.log("Show help")
-      // Implement help functionality
     },
     
     closeIdModal() {
       this.showIdModal = false;
       if (!this.pendingConfig?.Id) {
-        // Clear pending config if no ID was set
         this.pendingConfig = null;
       }
     },
     
     closeUpdateModal() {
       this.showUpdateModal = false;
-      // Clear pending config if user cancels update
       if (this.showUpdateModal) {
         this.pendingConfig = null;
       }

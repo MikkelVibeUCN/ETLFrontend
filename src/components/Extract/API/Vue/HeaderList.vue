@@ -45,99 +45,94 @@
 
     </template>
 
-    <script setup lang="ts">
-    import { computed } from 'vue';
-    import { useHeaders, type Header } from '../Scripts/useHeaders';
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useHeaders, type Header } from '../Scripts/useHeaders';
 
-    // Props and emits for v-model:headers
-    const props = defineProps<{
-        modelValue: Header[];
-    }>();
+const props = defineProps<{
+    modelValue: Header[];
+}>();
 
-    const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue']);
 
-    // Proxy for v-model="headers"
-    const headers = computed<Header[]>({
-        get: () => props.modelValue,
-        set: (val) => emit('update:modelValue', val)
-    });
+const headers = computed<Header[]>({
+    get: () => props.modelValue,
+    set: (val) => emit('update:modelValue', val)
+});
 
-    // Use utility methods from useHeaders (no internal headers)
-    const {
-        availableHeaderKeys,
-        getOptionsForHeader,
-        isHeaderTypeDisabled
-    } = useHeaders(headers.value);
+const {
+    availableHeaderKeys,
+    getOptionsForHeader,
+    isHeaderTypeDisabled
+} = useHeaders(headers.value);
 
-    // Add/remove modify the parent’s array directly
-    function addHeader() {
-        headers.value.push({ key: '', value: '', extra: '' });
-    }
+function addHeader() {
+    headers.value.push({ key: '', value: '', extra: '' });
+}
 
-    function removeHeader(index: number) {
-        headers.value.splice(index, 1);
-    }
-    </script>
+function removeHeader(index: number) {
+    headers.value.splice(index, 1);
+}
+</script>
 
 
-    <style scoped>
-    .row-with-label {
-        display: flex;
-        align-items: flex-start;
-        width: 100%;
-        gap: 0.5rem;
-        box-sizing: border-box;
-    }
+<style scoped>
+.row-with-label {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    gap: 0.5rem;
+    box-sizing: border-box;
+}
 
-    .left-label {
-        flex: 0 0 150px;
-        font-weight: bold;
-        white-space: nowrap;
-        text-align: left;
-        margin-top: 6px;
-        box-sizing: border-box;
-    }
+.left-label {
+    flex: 0 0 150px;
+    font-weight: bold;
+    white-space: nowrap;
+    text-align: left;
+    margin-top: 6px;
+    box-sizing: border-box;
+}
 
-    /* Fixes the layout without shrinking inputs */
-    .header-right {
-        flex: 1;
-        min-width: 0;
-    }
+.header-right {
+    flex: 1;
+    min-width: 0;
+}
 
-    .header-row {
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 0.5rem;
-        min-width: 0;
-    }
+.header-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    min-width: 0;
+}
 
-    .header-row select,
-    .header-row input {
-        flex: 1;
-        padding: 6px;
-        min-width: 0;
-        box-sizing: border-box;
-    }
+.header-row select,
+.header-row input {
+    flex: 1;
+    padding: 6px;
+    min-width: 0;
+    box-sizing: border-box;
+}
 
-    .header-row select:first-of-type {
-        width: 180px;
-        flex: 0 0 auto;
-    }
+.header-row select:first-of-type {
+    width: 180px;
+    flex: 0 0 auto;
+}
 
-    .header-row button {
-        flex: 0 0 auto;
-        width: 40px;
-        height: 36px;
-        padding: 0;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-weight: bold;
-        cursor: pointer;
-    }
+.header-row button {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+}
 
-    .hidden {
-        visibility: hidden;
-        position: absolute;
-        pointer-events: none;
-    }
-    </style>
+.hidden {
+    visibility: hidden;
+    position: absolute;
+    pointer-events: none;
+}
+</style>
