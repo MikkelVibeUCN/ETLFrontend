@@ -3,15 +3,15 @@ FluxETL: Low-code pipeline builder
 Setup Guide
 
 1. Install Vite & Vue Globally
-    npm install -g vite vue
+    ```pm install -g vite vue```
 
 2. Install TypeScript
-    npm install typescript --save-dev
+    ```npm install typescript --save-dev```
 Or global
-    npm install -g typescript
+    ```npm install -g typescript```
 
 3. Run the Dev Server
-    npm run dev
+    ```npm run dev```
 
 From the ETL-Project root directory (make sure Docker Desktop is running):
 
